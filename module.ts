@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import { create } from "@laclemen92/kvm";
+ * import { create, KVMEntity, ValueType } from "@laclemen92/kvm";
  * import { z } from "zod";
  *
  * const userSchema = z.object({
