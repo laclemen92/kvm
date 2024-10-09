@@ -11,7 +11,8 @@
     "zod": "npm:zod@^3.23.8"
   },
   "tasks": {
-    "check": "deno fmt --check && deno lint && deno task test && deno doc --lint module.ts",
+    "check": "deno fmt --check && deno lint && deno task test",
+    "check:docs": "deno doc --lint module.ts",
     "test": "DENO_KV_PATH=:memory: deno test --unstable-kv --allow-env --allow-read --allow-run --parallel --trace-leaks --coverage --doc",
     "coverage": "deno coverage coverage",
     "cov:gen": "deno task coverage --lcov --output=cov.lcov",
