@@ -1,0 +1,7 @@
+*.env
+*.DS_Store
+coverage/
+cov.lcov
+dev.ts
+deno.lock
+html_cov/

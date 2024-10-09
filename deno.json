@@ -1,0 +1,28 @@
+{
+  "name": "@laclemen92/kvm",
+  "version": "0.0.1",
+  "exports": "./module.ts",
+  "lock": false,
+  "imports": {
+    "@std/assert": "jsr:@std/assert@^0.221.0",
+    "@std/datetime": "jsr:@std/datetime@^0.221.0",
+    "@std/fs": "jsr:@std/fs@^0.221.0",
+    "@std/testing/mock": "jsr:@std/testing@^0.221.0/mock",
+    "zod": "npm:zod@^3.23.8"
+  },
+  "tasks": {
+    "demo": "DENO_KV_PATH=:memory: deno run --allow-net --env --allow-env --unstable-kv --watch demo.ts",
+    "check": "deno fmt --check && deno lint && deno task test && deno doc --lint module.ts",
+    "test": "DENO_KV_PATH=:memory: deno test --unstable-kv --allow-env --allow-read --allow-run --parallel --trace-leaks --coverage --doc",
+    "coverage": "deno coverage coverage",
+    "cov:gen": "deno task coverage --lcov --output=cov.lcov",
+    "cov:gen:html": "deno task coverage --html",
+    "update": "deno run -A -r https://fresh.deno.dev/update ."
+  },
+  "exclude": [
+    "coverage/"
+  ],
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": false
+  }
+}
