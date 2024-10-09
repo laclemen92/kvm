@@ -5,3 +5,5 @@ cov.lcov
 dev.ts
 deno.lock
 html_cov/
+.vscode
+deprecated

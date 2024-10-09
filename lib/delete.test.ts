@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, it } from "jsr:@std/testing/bdd";
 import { expect } from "jsr:@std/expect";
-import type { z } from "zod/mod.ts";
+import type { z } from "zod";
 import { create } from "./create.ts";
 import { deleteKey, deleteMany } from "./delete.ts";
 import { postEntity, userByValueEntity } from "./fixtures.ts";

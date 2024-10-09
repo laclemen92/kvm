@@ -1,6 +1,6 @@
 import { ValueType } from "./types.ts";
 import type { KVMEntity } from "./types.ts";
-import { z } from "zod/mod.ts";
+import { z } from "zod";
 
 const userSchema = z.object({
   id: z.string(),

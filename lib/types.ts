@@ -1,4 +1,4 @@
-import type { ZodObject, ZodRawShape } from "zod/types.ts";
+import type { ZodObject, ZodRawShape } from "zod";
 
 /**
  * KVMEntity that defines everything about the entity.
