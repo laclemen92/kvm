@@ -48,7 +48,7 @@ export type SecondaryIndex = {
   valueType?: ValueType;
   valueKey?: string;
   unique?: boolean;
-  name?: string;
+  name: string;
 };
 
 /**

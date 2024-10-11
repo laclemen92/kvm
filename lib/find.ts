@@ -29,7 +29,7 @@ export const findUnique = async <T = unknown>(
     secondaryIndex = entity.secondaryIndexes?.find(
       (value) => {
         // don't really know if I need an array of keys here
-        if (value.key[0].name === bySecondaryIndexName) {
+        if (value.name === bySecondaryIndexName) {
           return value;
         }
       },

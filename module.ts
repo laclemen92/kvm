@@ -23,6 +23,7 @@
  *      key: "id",
  *    }],
  *    secondaryIndexes: [{
+ *      name: "users_by_email",
  *      key: [{
  *        name: "users_by_email",
  *        key: "email",
@@ -30,6 +31,7 @@
  *      valueType: ValueType.KEY,
  *      valueKey: "id",
  *    }, {
+ *      name: "users_by_session",
  *      key: [{
  *        name: "users_by_session",
  *        key: "sessionId",

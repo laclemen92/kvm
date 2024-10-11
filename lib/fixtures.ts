@@ -14,6 +14,7 @@ export const userEntity: KVMEntity<typeof userSchema.shape> = {
     key: "id",
   }],
   secondaryIndexes: [{
+    name: "users_by_email",
     key: [{
       name: "users_by_email",
       key: "email",
@@ -21,6 +22,7 @@ export const userEntity: KVMEntity<typeof userSchema.shape> = {
     valueType: ValueType.KEY,
     valueKey: "id",
   }, {
+    name: "users_by_session",
     key: [{
       name: "users_by_session",
       key: "sessionId",
@@ -37,6 +39,7 @@ export const userByValueEntity: KVMEntity<typeof userSchema.shape> = {
     key: "id",
   }],
   secondaryIndexes: [{
+    name: "users_by_email",
     key: [{
       name: "users_by_email",
       key: "email",
@@ -44,6 +47,7 @@ export const userByValueEntity: KVMEntity<typeof userSchema.shape> = {
     valueType: ValueType.VALUE,
     valueKey: "id",
   }, {
+    name: "users_by_session",
     key: [{
       name: "users_by_session",
       key: "sessionId",
@@ -70,6 +74,7 @@ export const postEntity: KVMEntity<typeof postSchema.shape> = {
     key: "id",
   }],
   secondaryIndexes: [{
+    name: "posts_by_slug",
     key: [
       {
         name: "posts_by_slug",
@@ -109,6 +114,7 @@ export const commentEntity: KVMEntity<typeof commentSchema.shape> = {
     // relation:
   }],
   secondaryIndexes: [{
+    name: "comments_by_postId",
     key: [
       {
         name: "comments_by_postId",
@@ -187,6 +193,7 @@ export const categoryEntity: KVMEntity<typeof categorySchema.shape> = {
     },
   ],
   secondaryIndexes: [{
+    name: "posts_by_userId",
     key: [
       {
         name: "posts_by_userId",
