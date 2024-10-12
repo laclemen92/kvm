@@ -9,10 +9,11 @@ import {
   findUniqueOrThrow,
 } from "./find.ts";
 import { create } from "./create.ts";
-import { postEntity, productEntity } from "./fixtures.ts";
+import { postEntity, productEntity, voteEntity } from "./fixtures.ts";
 
 type Post = z.infer<typeof postEntity.schema>;
 type Product = z.infer<typeof productEntity.schema>;
+type Vote = z.infer<typeof voteEntity.schema>;
 
 describe("find", () => {
   let kv: Deno.Kv;
@@ -166,5 +167,19 @@ describe("find", () => {
 
     expect(manyBySecondary).toHaveLength(1);
     expect(manyBySecondary[0].value).toBe("product1");
+  });
+
+  it("should findUnique by object of values", async () => {
+    const postId = "post1";
+    const userLogin = "user2";
+    await create<Vote>(voteEntity, kv, {
+      postId: "post1",
+      userLogin: "user2",
+    });
+
+    const vote = await findUnique<Vote>(voteEntity, kv, { postId, userLogin });
+
+    expect(vote?.value?.postId).toBe(postId);
+    expect(vote?.value?.userLogin).toBe(userLogin);
   });
 });

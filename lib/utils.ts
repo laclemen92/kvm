@@ -1,8 +1,4 @@
-import type { Key, KeyParts } from "./types.ts";
-
-type StringKeyedValueObject = {
-  [key: string]: string;
-};
+import type { Key, KeyParts, StringKeyedValueObject } from "./types.ts";
 
 export const isDenoKvKeyPart = (
   value: StringKeyedValueObject | unknown | Deno.KvKeyPart,

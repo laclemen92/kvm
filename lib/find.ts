@@ -1,6 +1,15 @@
 import { ValueType } from "./types.ts";
-import type { FindManyOptions, KVMEntity, SecondaryIndex } from "./types.ts";
-import { buildPrimaryKey, isDenoKvKeyPart } from "./utils.ts";
+import type {
+  FindManyOptions,
+  KVMEntity,
+  SecondaryIndex,
+  StringKeyedValueObject,
+} from "./types.ts";
+import {
+  buildPrimaryKey,
+  isDenoKvKeyPart,
+  isStringKeyedValueObject,
+} from "./utils.ts";
 
 /**
  * Find a unique record by a Deno.KvKeyPart or Deno.KvKey.
@@ -18,7 +27,7 @@ import { buildPrimaryKey, isDenoKvKeyPart } from "./utils.ts";
 export const findUnique = async <T = unknown>(
   entity: KVMEntity,
   kv: Deno.Kv,
-  key: Deno.KvKeyPart | Deno.KvKey,
+  key: Deno.KvKeyPart | Deno.KvKey | StringKeyedValueObject,
   bySecondaryIndexName?: string,
   includeValue?: boolean,
 ): Promise<Deno.KvEntryMaybe<T> | null> => {
@@ -58,7 +67,7 @@ export const findUnique = async <T = unknown>(
     }
 
     return null;
-  } else if (isDenoKvKeyPart(key)) {
+  } else if (isDenoKvKeyPart(key) || isStringKeyedValueObject(key)) {
     const pk = buildPrimaryKey(
       entity.primaryKey,
       key,

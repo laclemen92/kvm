@@ -85,3 +85,7 @@ export type FindManyOptions = {
   cursor?: string;
   reverse?: boolean;
 };
+
+export type StringKeyedValueObject = {
+  [key: string]: string;
+};
