@@ -52,6 +52,8 @@
  *    age: 31,
  *    sessionId: "123"
  * });
+ *
+ * await kv.close();
  * ```
  */
 
