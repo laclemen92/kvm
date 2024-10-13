@@ -37,24 +37,25 @@ export const deleteKey = async <T = unknown>(
     const pk = buildPrimaryKey(entity.primaryKey, key);
 
     if (options && options.cascadeDelete) {
-      const deletes = [];
       const value: T | null = found && found.value ? found.value : null;
-      const atomicDelete = kv.atomic();
-      deletes.push(pk);
+
+      await kv.delete(pk);
 
       if (entity.secondaryIndexes) {
-        entity.secondaryIndexes.forEach((secondaryIndex: SecondaryIndex) => {
-          const secondaryIndexKey: Deno.KvKey = buildPrimaryKey(
-            secondaryIndex.key,
-            key,
-          );
+        entity.secondaryIndexes.forEach(
+          async (secondaryIndex: SecondaryIndex) => {
+            const secondaryIndexKey: Deno.KvKey = buildPrimaryKey(
+              secondaryIndex.key,
+              key,
+            );
 
-          deletes.push(secondaryIndexKey);
-        });
+            await kv.delete(secondaryIndexKey);
+          },
+        );
       }
 
       if (entity.relations) {
-        entity.relations.forEach((relation: Relation) => {
+        entity.relations.forEach(async (relation: Relation) => {
           if (
             relation.type === "one-to-many" &&
             isStringKeyedValueObject(value)
@@ -67,16 +68,10 @@ export const deleteKey = async <T = unknown>(
               ...pk,
             ];
 
-            deletes.push(relationKey);
+            await kv.delete(relationKey);
           }
         });
       }
-
-      deletes.forEach((deleteParams) => {
-        atomicDelete.delete(deleteParams);
-      });
-
-      await atomicDelete.commit();
 
       return found;
     } else {
