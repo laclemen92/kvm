@@ -46,7 +46,7 @@ export const deleteKey = async <T = unknown>(
           async (secondaryIndex: SecondaryIndex) => {
             const secondaryIndexKey: Deno.KvKey = buildPrimaryKey(
               secondaryIndex.key,
-              key,
+              value,
             );
 
             await kv.delete(secondaryIndexKey);

@@ -113,14 +113,22 @@ describe("delete", () => {
 
     expect(deleted?.value).toMatchObject(complexPost1);
 
-    const userSecondary = await kv.get(["user", "cp1", "posts", "cp1"]);
-    expect(userSecondary.value).toBe(null);
+    const userSecondary = await Array.fromAsync(
+      await kv.list({
+        prefix: ["user", "laclemen92", "posts"],
+      }),
+    );
+    expect(userSecondary).toMatchObject([]);
 
-    const primary = await kv.get(["complex_posts", "cp1"]);
-    expect(primary.value).toBe(null);
+    const primary = await Array.fromAsync(
+      await kv.list({ prefix: ["complex_posts"] }),
+    );
+    expect(primary).toMatchObject([]);
 
-    const slugSecondary = await kv.get(["complex_posts_by_slug", "cp1"]);
-    expect(slugSecondary.value).toBe(null);
+    const slugSecondary = await Array.fromAsync(
+      await kv.list({ prefix: ["complex_posts_by_slug"] }),
+    );
+    expect(slugSecondary).toMatchObject([]);
   });
   // test for deleting many with one not existing
 });
