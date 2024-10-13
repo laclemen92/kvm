@@ -1,5 +1,9 @@
 import { ValueType } from "./types.ts";
-import type { KVMEntity, SecondaryIndex } from "./types.ts";
+import type {
+  KVMEntity,
+  SecondaryIndex,
+  StringKeyedValueObject,
+} from "./types.ts";
 import { buildPrimaryKey } from "./utils.ts";
 import { findUnique } from "./find.ts";
 
@@ -16,7 +20,7 @@ import { findUnique } from "./find.ts";
 export const update = async <T = unknown>(
   entity: KVMEntity,
   kv: Deno.Kv,
-  id: Deno.KvKeyPart,
+  id: Deno.KvKeyPart | StringKeyedValueObject,
   value: Partial<T>,
   options?: { expireIn?: number; onlyChangedFields?: boolean },
 ): Promise<Deno.KvEntryMaybe<T> | null> => {

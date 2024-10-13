@@ -1,4 +1,9 @@
-import type { KVMEntity, Relation, SecondaryIndex } from "./types.ts";
+import type {
+  KVMEntity,
+  Relation,
+  SecondaryIndex,
+  StringKeyedValueObject,
+} from "./types.ts";
 import {
   buildPrimaryKey,
   isDenoKvKeyPart,
@@ -19,16 +24,16 @@ import { findUnique } from "./find.ts";
 export const deleteKey = async <T = unknown>(
   entity: KVMEntity,
   kv: Deno.Kv,
-  key: Deno.KvKeyPart | Deno.KvKey,
+  key: Deno.KvKeyPart | Deno.KvKey | StringKeyedValueObject,
   options?: { cascadeDelete: boolean },
 ): Promise<Deno.KvEntryMaybe<T>> => {
   const found = await findUnique<T>(entity, kv, key);
-  console.error(found);
+
   if (!found?.value) {
     throw new Error("Record not found");
   }
 
-  if (isDenoKvKeyPart(key)) {
+  if (isDenoKvKeyPart(key) || isStringKeyedValueObject(key)) {
     const pk = buildPrimaryKey(entity.primaryKey, key);
 
     if (options && options.cascadeDelete) {

@@ -271,3 +271,49 @@ export const voteEntity: KVMEntity<typeof voteSchema.shape> = {
   }],
   schema: voteSchema,
 };
+
+const complexPostSchema = z.object({
+  id: z.string(),
+  userLogin: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  url: z.string(),
+  content: z.string(),
+  deleted: z.boolean().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+}).strict();
+
+export const complexPostEntity: KVMEntity<typeof complexPostSchema.shape> = {
+  name: "complex_posts",
+  primaryKey: [
+    {
+      name: "complex_posts",
+      key: "id",
+    },
+  ],
+  secondaryIndexes: [
+    {
+      name: "complex_posts_by_slug",
+      key: [{
+        name: "complex_posts_by_slug",
+        key: "slug",
+      }],
+      valueKey: "id",
+      valueType: ValueType.KEY,
+    },
+    {
+      name: "user",
+      key: [{
+        name: "user",
+        key: "userLogin",
+      }, {
+        name: "posts",
+        key: "id",
+      }],
+      valueKey: "id",
+      valueType: ValueType.KEY,
+    },
+  ],
+  schema: complexPostSchema,
+};

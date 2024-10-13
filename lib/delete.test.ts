@@ -3,10 +3,15 @@ import { expect } from "jsr:@std/expect";
 import type { z } from "zod";
 import { create } from "./create.ts";
 import { deleteKey, deleteMany } from "./delete.ts";
-import { postEntity, userByValueEntity } from "./fixtures.ts";
+import {
+  complexPostEntity,
+  postEntity,
+  userByValueEntity,
+} from "./fixtures.ts";
 
 type Post = z.infer<typeof postEntity.schema>;
 type User = z.infer<typeof userByValueEntity.schema>;
+type ComplexPost = z.infer<typeof complexPostEntity.schema>;
 
 describe("delete", () => {
   let kv: Deno.Kv;
@@ -39,6 +44,15 @@ describe("delete", () => {
     age: 31,
   };
 
+  const complexPost1: ComplexPost = {
+    id: "cp1",
+    slug: "best-post",
+    title: "best post ever",
+    content: "read me..",
+    userLogin: "laclemen92",
+    url: "/best-post",
+  };
+
   beforeEach(async () => {
     kv = await Deno.openKv(":memory:");
     // let's create some test data
@@ -46,6 +60,7 @@ describe("delete", () => {
     await create<Post>(postEntity, kv, post2);
     await create<User>(userByValueEntity, kv, user1);
     await create<User>(userByValueEntity, kv, user2);
+    await create<ComplexPost>(complexPostEntity, kv, complexPost1);
   });
 
   afterEach(async () => {
@@ -88,5 +103,24 @@ describe("delete", () => {
     expect(deleted[1]?.value).toMatchObject(post2);
   });
 
+  it("should delete all keys for a complex secondary index", async () => {
+    const deleted = await deleteKey<ComplexPost>(
+      complexPostEntity,
+      kv,
+      complexPost1.id,
+      { cascadeDelete: true },
+    );
+
+    expect(deleted?.value).toMatchObject(complexPost1);
+
+    const userSecondary = await kv.get(["user", "cp1", "posts", "cp1"]);
+    expect(userSecondary.value).toBe(null);
+
+    const primary = await kv.get(["complex_posts", "cp1"]);
+    expect(primary.value).toBe(null);
+
+    const slugSecondary = await kv.get(["complex_posts_by_slug", "cp1"]);
+    expect(slugSecondary.value).toBe(null);
+  });
   // test for deleting many with one not existing
 });
