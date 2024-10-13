@@ -1,6 +1,6 @@
 {
   "name": "@laclemen92/kvm",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "exports": "./module.ts",
   "lock": false,
   "imports": {
