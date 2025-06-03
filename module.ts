@@ -59,7 +59,7 @@
  *
  * const foundUser = await User.findById("user1");
  * await user.delete();
- * 
+ *
  * // Query Builder for complex queries
  * const users = await User
  *   .where('age').gte(18)
@@ -87,47 +87,91 @@ export * from "./lib/update.ts";
 export * from "./lib/types.ts";
 
 // Model-Based API (New - Recommended)
-export { KVM, createKVM } from "./lib/kvm.ts";
+export { createKVM, KVM } from "./lib/kvm.ts";
 export { BaseModel } from "./lib/model.ts";
 export type {
+  CreateOptions,
+  DeleteOptions,
+  FindOptions,
+  InferModel,
+  ModelConstructor,
   ModelDefinition,
   ModelDocument,
   ModelStatic,
-  ModelConstructor,
-  InferModel,
-  CreateOptions,
   UpdateOptions,
-  DeleteOptions,
-  FindOptions,
 } from "./lib/model-types.ts";
 
 // Query Builder API
 export type {
+  ComparisonOperator,
   QueryBuilder,
-  WhereClause,
+  QueryBuilderFactory,
   QueryConfig,
-  WhereCondition,
+  QueryExecutor,
   SortConfig,
   SortDirection,
-  ComparisonOperator,
-  QueryExecutor,
-  QueryBuilderFactory,
+  WhereClause,
+  WhereCondition,
 } from "./lib/query-types.ts";
 export { KVMQueryBuilder } from "./lib/query-builder.ts";
 
 // Error Handling
 export {
-  KVMError,
-  KVMValidationError,
-  KVMNotFoundError,
-  KVMConstraintError,
-  KVMOperationError,
+  KVMBatchOperationError,
+  KVMBatchValidationError,
+  KVMConcurrencyError,
   KVMConfigurationError,
   KVMConnectionError,
-  KVMConcurrencyError,
-  KVMQueryError,
+  KVMConstraintError,
+  KVMError,
   KVMErrorUtils,
+  KVMNotFoundError,
+  KVMOperationError,
+  KVMQueryError,
+  KVMValidationError,
 } from "./lib/errors.ts";
+
+// Batch Operations
+export type {
+  BatchCreateOptions,
+  BatchCreateResult,
+  BatchDeleteInput,
+  BatchDeleteOptions,
+  BatchDeleteResult,
+  BatchUpdateInput,
+  BatchUpdateOptions,
+  BatchUpdateResult,
+  BatchValidationResult,
+  ValidationResult,
+} from "./lib/batch-types.ts";
+
+// Middleware/Hooks
+export type {
+  AuditPluginOptions,
+  HookContext,
+  HookExecutionResult,
+  HookFunction,
+  HookManager,
+  HookOptions,
+  HookTiming,
+  HookType,
+  Plugin,
+  PostHookFunction,
+  PreHookFunction,
+  RegisteredHook,
+  TimestampPluginOptions,
+  ValidationPluginOptions,
+} from "./lib/middleware-types.ts";
+export {
+  auditPlugin,
+  KVMHookManager,
+  timestampsPlugin,
+  validationPlugin,
+} from "./lib/middleware.ts";
+export {
+  HookExecutionError,
+  HookTimeoutError,
+} from "./lib/middleware-types.ts";
 
 // Re-export Zod types for convenience
 export type { ZodObject, ZodRawShape } from "zod";

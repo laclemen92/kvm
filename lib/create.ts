@@ -3,7 +3,7 @@ import {
   isDenoKvKeyPart,
   isStringKeyedValueObject,
 } from "./utils.ts";
-import { ValueType } from "./types.ts";
+import { RelationType, ValueType } from "./types.ts";
 import type { KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { findUnique } from "./find.ts";
 
@@ -61,27 +61,40 @@ export const create = async <T = unknown>(
   }
 
   if (entity.relations) {
-    // in example when a comment is written. We want to also write it to the post
-    // [ "posts", "postId1", "comments", "id" ]
     entity.relations.forEach((relation: Relation) => {
-      if (
-        relation.type === "one-to-many" &&
-        isStringKeyedValueObject(value)
-      ) {
-        const relationKey = [
-          relation.entityName,
-          ...relation.fields.map((field) => {
-            return value[field];
-          }),
-          ...pk,
-        ];
+      if (!isStringKeyedValueObject(value)) return;
 
-        checks.push({ key: relationKey, versionstamp: null });
-        if (relation.valueType === ValueType.KEY && relation.valueKey) {
-          sets.push({ key: relationKey, value: value[relation.valueKey] });
-        } else {
-          sets.push({ key: relationKey, value });
-        }
+      switch (relation.type) {
+        case RelationType.ONE_TO_MANY:
+        case "one-to-many" as any: // Backward compatibility
+          // Create index for hasMany relations: [parentEntity, foreignKey, childEntity, childId]
+          const relationKey = [
+            relation.entityName,
+            ...relation.fields.map((field) => value[field]),
+            ...pk,
+          ];
+
+          checks.push({ key: relationKey, versionstamp: null });
+          if (relation.valueType === ValueType.KEY && relation.valueKey) {
+            sets.push({ key: relationKey, value: value[relation.valueKey] });
+          } else {
+            sets.push({ key: relationKey, value });
+          }
+          break;
+
+        case RelationType.BELONGS_TO:
+          // For belongsTo, we don't need to create additional keys during creation
+          // The foreign key is already stored in the entity itself
+          break;
+
+        case RelationType.MANY_TO_MANY:
+          // For many-to-many, we'll handle join table creation in a separate function
+          // This requires the join table to be created/updated separately
+          if (relation.through) {
+            // We could create join table entries here if needed
+            // For now, we'll leave this to be handled by separate join table operations
+          }
+          break;
       }
     });
   }
@@ -115,5 +128,68 @@ export const create = async <T = unknown>(
   } catch (e) {
     console.error(e);
     return null;
+  }
+};
+
+/**
+ * Create a many-to-many relationship by adding an entry to the join table
+ *
+ * @param kv The Deno.Kv instance
+ * @param joinTableName The name of the join table
+ * @param entity1Id ID of the first entity
+ * @param entity1Field Field name for the first entity ID
+ * @param entity2Id ID of the second entity
+ * @param entity2Field Field name for the second entity ID
+ * @param additionalData Additional data to store in the join table
+ */
+export const createManyToManyRelation = async (
+  kv: Deno.Kv,
+  joinTableName: string,
+  entity1Id: string,
+  entity1Field: string,
+  entity2Id: string,
+  entity2Field: string,
+  additionalData?: Record<string, any>,
+): Promise<boolean> => {
+  try {
+    const joinTableKey = [joinTableName, entity1Id, entity2Id];
+    const joinTableValue = {
+      [entity1Field]: entity1Id,
+      [entity2Field]: entity2Id,
+      ...additionalData,
+    };
+
+    const operation = kv.atomic();
+    operation.check({ key: joinTableKey, versionstamp: null });
+    operation.set(joinTableKey, joinTableValue);
+
+    const result = await operation.commit();
+    return result.ok;
+  } catch (error) {
+    console.error("Failed to create many-to-many relation:", error);
+    return false;
+  }
+};
+
+/**
+ * Remove a many-to-many relationship by deleting the join table entry
+ */
+export const deleteManyToManyRelation = async (
+  kv: Deno.Kv,
+  joinTableName: string,
+  entity1Id: string,
+  entity2Id: string,
+): Promise<boolean> => {
+  try {
+    const joinTableKey = [joinTableName, entity1Id, entity2Id];
+
+    const operation = kv.atomic();
+    operation.delete(joinTableKey);
+
+    const result = await operation.commit();
+    return result.ok;
+  } catch (error) {
+    console.error("Failed to delete many-to-many relation:", error);
+    return false;
   }
 };

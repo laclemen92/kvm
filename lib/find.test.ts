@@ -201,19 +201,23 @@ describe("find", () => {
       ...postEntity,
       primaryKey: [{ name: "numeric_posts" }],
     };
-    
+
     // Set a record with numeric key
     await kv.set(["numeric_posts", 123], { id: 123, title: "Numeric Post" });
-    
+
     // Find using direct numeric key - tests else branch at line 77
-    const result = await findUnique<{ id: number; title: string }>(numericEntity, kv, 123);
-    
+    const result = await findUnique<{ id: number; title: string }>(
+      numericEntity,
+      kv,
+      123,
+    );
+
     expect(result?.value?.id).toBe(123);
   });
 
   it("should throw when findUniqueOrThrow doesn't find record", async () => {
     await expect(
-      findUniqueOrThrow<Post>(postEntity, kv, "non-existent-post")
+      findUniqueOrThrow<Post>(postEntity, kv, "non-existent-post"),
     ).rejects.toThrow("Not found");
   });
 
@@ -224,7 +228,7 @@ describe("find", () => {
         kv,
         "/non-existent-slug",
         "posts_by_slug",
-      )
+      ),
     ).rejects.toThrow("Not found");
   });
 
@@ -249,7 +253,7 @@ describe("find", () => {
     };
 
     await expect(
-      findFirstOrThrow(emptyEntity, kv)
+      findFirstOrThrow(emptyEntity, kv),
     ).rejects.toThrow("Not found");
   });
 
@@ -265,7 +269,9 @@ describe("find", () => {
 
   it("should handle reverse option in findMany", async () => {
     const normalOrder = await findMany<Post>(postEntity, kv);
-    const reverseOrder = await findMany<Post>(postEntity, kv, { reverse: true });
+    const reverseOrder = await findMany<Post>(postEntity, kv, {
+      reverse: true,
+    });
 
     expect(normalOrder[0].value.id).toBe("post1");
     expect(reverseOrder[0].value.id).toBe("post2");

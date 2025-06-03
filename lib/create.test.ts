@@ -188,7 +188,12 @@ describe("create", () => {
     expect(result?.value?.id).toBe("product1");
 
     // Verify relation was created with KEY type
-    const relationKey = await kv.get(["categories", "cat1", "products", "product1"]);
+    const relationKey = await kv.get([
+      "categories",
+      "cat1",
+      "products",
+      "product1",
+    ]);
     expect(relationKey.value).toBe("product1"); // Should store just the ID
   });
 
@@ -219,7 +224,9 @@ describe("create", () => {
     expect(result).toBeNull();
     expect(errors.length).toBe(1);
     expect(errors[0]).toBeInstanceOf(Error);
-    expect((errors[0] as Error).message).toContain("expected string, number, bigint, ArrayBufferView, boolean");
+    expect((errors[0] as Error).message).toContain(
+      "expected string, number, bigint, ArrayBufferView, boolean",
+    );
 
     // Restore console.error
     console.error = originalError;

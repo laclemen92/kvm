@@ -38,7 +38,7 @@ describe("Model-Based API - Basic Tests", () => {
       name: z.string(),
     });
 
-    const User = kvm.model('users', {
+    const User = kvm.model("users", {
       schema: userSchema,
       primaryKey: [{ name: "users", key: "id" }],
     });
@@ -82,7 +82,7 @@ describe("Model-Based API - Basic Tests", () => {
       name: z.string(),
     });
 
-    const User = kvm.model('users', {
+    const User = kvm.model("users", {
       schema: userSchema,
       primaryKey: [{ name: "users", key: "id" }],
     });
@@ -91,8 +91,8 @@ describe("Model-Based API - Basic Tests", () => {
     expect(User.modelName).toBe("users");
     expect(kvm.hasModel("users")).toBe(true);
     expect(kvm.getModelNames()).toContain("users");
-    
-    const retrievedUser = kvm.getModel('users');
+
+    const retrievedUser = kvm.getModel("users");
     expect(retrievedUser).toBe(User);
   });
 
@@ -102,7 +102,7 @@ describe("Model-Based API - Basic Tests", () => {
       name: z.string(),
     });
 
-    const User = kvm.model('users', {
+    const User = kvm.model("users", {
       schema: userSchema,
       primaryKey: [{ name: "users", key: "id" }],
     });
@@ -112,7 +112,7 @@ describe("Model-Based API - Basic Tests", () => {
 
     const users = await User.findMany();
     expect(users).toHaveLength(2);
-    
+
     const first = await User.findFirst();
     expect(first).not.toBeNull();
     expect(first!.id).toBe("user1");
@@ -124,7 +124,7 @@ describe("Model-Based API - Basic Tests", () => {
       name: z.string(),
     });
 
-    const User = kvm.model('users', {
+    const User = kvm.model("users", {
       schema: userSchema,
       primaryKey: [{ name: "users", key: "id" }],
     });

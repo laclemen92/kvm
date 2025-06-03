@@ -134,11 +134,11 @@ describe("delete", () => {
   it("should delete with object key using StringKeyedValueObject", async () => {
     // Test deletion using an object with key-value pairs
     const objectKey = { id: "post1" };
-    
+
     const deleted = await deleteKey<Post>(postEntity, kv, objectKey);
-    
+
     expect(deleted?.value).toMatchObject(post1);
-    
+
     // Verify it was deleted
     const afterDelete = await kv.get(["posts", "post1"]);
     expect(afterDelete.value).toBeNull();
@@ -166,7 +166,7 @@ describe("delete", () => {
         { key: post1.id },
         { key: "nonexistent-post" }, // This doesn't exist - will throw
         { key: post2.id },
-      ])
+      ]),
     ).rejects.toThrow("Record not found");
 
     // Verify first post was deleted before error
@@ -216,13 +216,13 @@ describe("delete", () => {
   it("should test else branch when not using cascadeDelete with string key", async () => {
     // This tests line 77-79 in delete.ts
     const deleted = await deleteKey<Post>(postEntity, kv, "post1");
-    
+
     expect(deleted?.value).toMatchObject(post1);
-    
+
     // Verify primary key was deleted
     const afterDelete = await kv.get(["posts", "post1"]);
     expect(afterDelete.value).toBeNull();
-    
+
     // Verify secondary index still exists (not cascaded)
     const slugIndex = await kv.get(["posts_by_slug", post1.slug]);
     expect(slugIndex.value).toBe("post1");
@@ -244,7 +244,9 @@ describe("delete", () => {
     } as unknown as Deno.Kv;
 
     await expect(
-      deleteKey<User>(userByValueEntity, mockKv, "user1", { cascadeDelete: true })
+      deleteKey<User>(userByValueEntity, mockKv, "user1", {
+        cascadeDelete: true,
+      }),
     ).rejects.toThrow("Failed to delete users");
   });
 });

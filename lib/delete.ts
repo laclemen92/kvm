@@ -1,6 +1,7 @@
 import type {
   KVMEntity,
   Relation,
+  RelationType,
   SecondaryIndex,
   StringKeyedValueObject,
 } from "./types.ts";
@@ -9,7 +10,7 @@ import {
   isDenoKvKeyPart,
   isStringKeyedValueObject,
 } from "./utils.ts";
-import { findUnique } from "./find.ts";
+import { findMany, findUnique } from "./find.ts";
 
 /**
  * Delete a record by key.
@@ -41,7 +42,7 @@ export const deleteKey = async <T = unknown>(
 
       // Use atomic operation for all cascade deletes
       const atomic = kv.atomic();
-      
+
       // Delete primary key
       atomic.delete(pk);
 
@@ -57,22 +58,17 @@ export const deleteKey = async <T = unknown>(
       }
 
       // Delete relations
-      if (entity.relations) {
-        entity.relations.forEach((relation: Relation) => {
-          if (
-            relation.type === "one-to-many" &&
-            isStringKeyedValueObject(value)
-          ) {
-            const relationKey = [
-              relation.entityName,
-              ...relation.fields.map((field) => {
-                return value[field];
-              }),
-              ...pk,
-            ];
-            atomic.delete(relationKey);
-          }
-        });
+      if (entity.relations && isStringKeyedValueObject(value)) {
+        for (const relation of entity.relations) {
+          await _handleRelationCascadeDelete(
+            kv,
+            atomic,
+            relation,
+            value,
+            pk,
+            entity.name,
+          );
+        }
       }
 
       const result = await atomic.commit();
@@ -115,4 +111,140 @@ export const deleteMany = async <T = unknown>(
   }
 
   return results;
+};
+
+/**
+ * Handle cascade delete for different relation types
+ */
+async function _handleRelationCascadeDelete(
+  kv: Deno.Kv,
+  atomic: Deno.AtomicOperation,
+  relation: Relation,
+  value: StringKeyedValueObject,
+  pk: Deno.KvKey,
+  entityName: string,
+): Promise<void> {
+  switch (relation.type) {
+    case "one-to-many" as any: // Backward compatibility
+    case "hasMany" as any:
+      // Delete the relation index
+      const relationKey = [
+        relation.entityName,
+        ...relation.fields.map((field) => value[field]),
+        ...pk,
+      ];
+      atomic.delete(relationKey);
+      break;
+
+    case "belongsTo" as any:
+      // For belongsTo, we don't need to delete anything since the foreign key is in this entity
+      // The related parent entity is not affected
+      break;
+
+    case "manyToMany" as any:
+      // For many-to-many, delete all join table entries
+      if (relation.through) {
+        try {
+          const primaryKeyValue = value.id ||
+            value[pk[pk.length - 1] as string];
+
+          // Find all join table entries for this entity
+          const joinTableResults = await findMany(
+            {
+              name: relation.through,
+              primaryKey: [{ name: relation.through }],
+            } as KVMEntity,
+            kv,
+            {
+              prefix: [relation.through],
+              limit: 1000, // Should be configurable
+            },
+          );
+
+          // Delete join table entries that reference this entity
+          for (const joinRecord of joinTableResults) {
+            const joinValue = joinRecord.value as any;
+            if (
+              joinValue &&
+              relation.fields.some((field: string) =>
+                joinValue[field] === primaryKeyValue
+              )
+            ) {
+              atomic.delete(joinRecord.key);
+            }
+          }
+        } catch (error) {
+          console.warn(
+            `Failed to cascade delete many-to-many relations for ${entityName}:`,
+            error,
+          );
+        }
+      }
+      break;
+
+    default:
+      console.warn(
+        `Unknown relation type for cascade delete: ${relation.type}`,
+      );
+  }
+}
+
+/**
+ * Delete cascade for hasMany relations - deletes all child records
+ * This is a more aggressive cascade that deletes the actual child records, not just the relation indexes
+ */
+export const cascadeDeleteChildren = async <T = unknown>(
+  kv: Deno.Kv,
+  parentEntity: KVMEntity,
+  childEntity: KVMEntity,
+  parentValue: StringKeyedValueObject,
+  relation: Relation,
+): Promise<void> => {
+  try {
+    const parentPrimaryKey = parentValue.id ||
+      parentValue[parentEntity.primaryKey[0].key!];
+
+    // Find all child records
+    const childResults = await findMany(
+      childEntity,
+      kv,
+      {
+        prefix: [childEntity.name],
+        limit: 1000,
+      },
+    );
+
+    // Filter children that belong to this parent
+    const childrenToDelete = childResults.filter((childResult) => {
+      const childValue = childResult.value as any;
+      return relation.fields.some((field: string) =>
+        childValue?.[field] === parentPrimaryKey
+      );
+    });
+
+    // Delete each child record
+    const atomic = kv.atomic();
+    for (const child of childrenToDelete) {
+      atomic.delete(child.key);
+
+      // Also delete child's secondary indexes if needed
+      if (childEntity.secondaryIndexes) {
+        childEntity.secondaryIndexes.forEach((secondaryIndex) => {
+          const secondaryIndexKey = buildPrimaryKey(
+            secondaryIndex.key,
+            child.value,
+          );
+          atomic.delete(secondaryIndexKey);
+        });
+      }
+    }
+
+    await atomic.commit();
+  } catch (error) {
+    console.error(
+      `Failed to cascade delete children for ${parentEntity.name}:`,
+      error,
+    );
+    throw error;
+  }
 };

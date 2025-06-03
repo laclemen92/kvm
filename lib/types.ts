@@ -26,14 +26,24 @@ export type Relations = Relation[];
  * Define a relation to another entity
  */
 export type Relation = {
-  // entity: KVMEntity;
   entityName: string;
   fields: string[];
-  // references: string[];
   valueType?: ValueType;
   valueKey?: string;
-  type: string;
+  type: RelationType;
+  foreignKey?: string;
+  through?: string;
+  cascade?: boolean;
 };
+
+/**
+ * Supported relation types
+ */
+export enum RelationType {
+  ONE_TO_MANY = "hasMany",
+  BELONGS_TO = "belongsTo",
+  MANY_TO_MANY = "manyToMany",
+}
 
 /**
  * Array of SecondaryIndexes for defining multiple per entity
@@ -88,4 +98,23 @@ export type FindManyOptions = {
 
 export type StringKeyedValueObject = {
   [key: string]: string;
+};
+
+/**
+ * Options for loading relations
+ */
+export type PopulateOptions = {
+  path: string;
+  select?: string[];
+  match?: Record<string, any>;
+  options?: FindManyOptions;
+};
+
+/**
+ * Helper type for relation inclusion paths
+ */
+export type IncludePath = string | {
+  path: string;
+  include?: IncludePath[];
+  select?: string[];
 };

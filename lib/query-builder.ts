@@ -1,17 +1,17 @@
 import type {
+  ComparisonOperator,
   QueryBuilder,
-  WhereClause,
   QueryConfig,
-  WhereCondition,
+  QueryExecutor,
   SortConfig,
   SortDirection,
-  ComparisonOperator,
-  QueryExecutor,
+  WhereClause,
+  WhereCondition,
 } from "./query-types.ts";
-import type { ModelDocument, ModelConstructor } from "./model-types.ts";
-import type { KVMEntity, FindManyOptions } from "./types.ts";
+import type { ModelConstructor, ModelDocument } from "./model-types.ts";
+import type { FindManyOptions, KVMEntity } from "./types.ts";
 import { findMany } from "./find.ts";
-import { KVMNotFoundError, KVMQueryError, KVMErrorUtils } from "./errors.ts";
+import { KVMErrorUtils, KVMNotFoundError, KVMQueryError } from "./errors.ts";
 
 /**
  * WhereClause implementation for building field-specific conditions
@@ -19,10 +19,13 @@ import { KVMNotFoundError, KVMQueryError, KVMErrorUtils } from "./errors.ts";
 class WhereClauseImpl<T> implements WhereClause<T> {
   constructor(
     private field: string,
-    private queryBuilder: KVMQueryBuilder<T>
+    private queryBuilder: KVMQueryBuilder<T>,
   ) {}
 
-  private addCondition(operator: ComparisonOperator, value: any): QueryBuilder<T> {
+  private addCondition(
+    operator: ComparisonOperator,
+    value: any,
+  ): QueryBuilder<T> {
     this.queryBuilder.addWhereCondition({
       field: this.field,
       operator,
@@ -126,7 +129,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   constructor(
     private entity: KVMEntity,
     private kv: Deno.Kv,
-    private ModelClass: ModelConstructor<T>
+    private ModelClass: ModelConstructor<T>,
   ) {}
 
   /**
@@ -142,7 +145,9 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   where(field: keyof T): WhereClause<T>;
   where(field: string): WhereClause<T>;
   where(conditions: Partial<T>): QueryBuilder<T>;
-  where(fieldOrConditions: keyof T | string | Partial<T>): WhereClause<T> | QueryBuilder<T> {
+  where(
+    fieldOrConditions: keyof T | string | Partial<T>,
+  ): WhereClause<T> | QueryBuilder<T> {
     if (typeof fieldOrConditions === "object" && fieldOrConditions !== null) {
       // Handle object conditions: where({ name: "John", age: 30 })
       for (const [field, value] of Object.entries(fieldOrConditions)) {
@@ -164,7 +169,10 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    */
   orderBy(field: keyof T, direction?: SortDirection): QueryBuilder<T>;
   orderBy(field: string, direction?: SortDirection): QueryBuilder<T>;
-  orderBy(field: keyof T | string, direction: SortDirection = "asc"): QueryBuilder<T> {
+  orderBy(
+    field: keyof T | string,
+    direction: SortDirection = "asc",
+  ): QueryBuilder<T> {
     this.config.sort.push({
       field: field as string,
       direction,
@@ -177,7 +185,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    */
   limit(count: number): QueryBuilder<T> {
     if (count < 0) {
-      throw new KVMQueryError('Limit must be non-negative', { limit: count });
+      throw new KVMQueryError("Limit must be non-negative", { limit: count });
     }
     this.config.limit = count;
     return this;
@@ -185,7 +193,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
 
   offset(count: number): QueryBuilder<T> {
     if (count < 0) {
-      throw new KVMQueryError('Offset must be non-negative', { offset: count });
+      throw new KVMQueryError("Offset must be non-negative", { offset: count });
     }
     this.config.offset = count;
     return this;
@@ -208,7 +216,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   select(...fields: (keyof T)[]): QueryBuilder<T>;
   select(...args: any[]): QueryBuilder<T> {
     const fields = Array.isArray(args[0]) ? args[0] : args;
-    this.config.select = fields.map(f => f as string);
+    this.config.select = fields.map((f) => f as string);
     return this;
   }
 
@@ -217,26 +225,28 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    */
   async find(): Promise<(ModelDocument<T> & T)[]> {
     const results = await this.executeQuery();
-    return results.map(result => new this.ModelClass(result.value) as ModelDocument<T> & T);
+    return results.map((result) =>
+      new this.ModelClass(result.value) as ModelDocument<T> & T
+    );
   }
 
   async findOne(): Promise<(ModelDocument<T> & T) | null> {
     // Limit to 1 for efficiency
     const originalLimit = this.config.limit;
     this.config.limit = 1;
-    
+
     const results = await this.find();
-    
+
     // Restore original limit
     this.config.limit = originalLimit;
-    
+
     return results.length > 0 ? results[0] : null;
   }
 
   async findOneOrThrow(): Promise<ModelDocument<T> & T> {
     const result = await this.findOne();
     if (!result) {
-      throw new KVMNotFoundError(this.entity.name, this.config, 'query');
+      throw new KVMNotFoundError(this.entity.name, this.config, "query");
     }
     return result;
   }
@@ -279,21 +289,22 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
     try {
       // For complex queries with where conditions or sorting, we need to fetch all data first
       // and then apply filtering/sorting client-side
-      const needsClientSideProcessing = this.config.where.length > 0 || this.config.sort.length > 0;
-      
+      const needsClientSideProcessing = this.config.where.length > 0 ||
+        this.config.sort.length > 0;
+
       // Convert QueryBuilder config to FindManyOptions
       const options: FindManyOptions = {};
-      
+
       // Only apply KV-level optimizations if we don't need client-side processing
       if (!needsClientSideProcessing) {
         if (this.config.limit) {
           options.limit = this.config.limit;
         }
-        
+
         if (this.config.cursor) {
           options.cursor = this.config.cursor;
         }
-        
+
         if (this.config.reverse) {
           options.reverse = this.config.reverse;
         }
@@ -304,14 +315,14 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
 
       // Apply where conditions (client-side filtering)
       if (this.config.where.length > 0) {
-        results = results.filter(entry => {
-          return this.config.where.every(condition => {
+        results = results.filter((entry) => {
+          return this.config.where.every((condition) => {
             try {
               return this.evaluateCondition(entry.value, condition);
             } catch (error) {
               throw new KVMQueryError(
                 `Failed to evaluate condition on field '${condition.field}' with operator '${condition.operator}'`,
-                { condition, value: entry.value }
+                { condition, value: entry.value },
               );
             }
           });
@@ -325,13 +336,15 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
             for (const sortConfig of this.config.sort) {
               const aValue = (a.value as any)[sortConfig.field];
               const bValue = (b.value as any)[sortConfig.field];
-              
+
               let comparison = 0;
               if (aValue < bValue) comparison = -1;
               else if (aValue > bValue) comparison = 1;
-              
+
               if (comparison !== 0) {
-                return sortConfig.direction === "desc" ? -comparison : comparison;
+                return sortConfig.direction === "desc"
+                  ? -comparison
+                  : comparison;
               }
             }
             return 0;
@@ -339,14 +352,16 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
         } catch (error) {
           throw new KVMQueryError(
             `Failed to sort results`,
-            { sortConfig: this.config.sort }
+            { sortConfig: this.config.sort },
           );
         }
       }
 
       // Apply offset
       if (this.config.offset && this.config.offset < 0) {
-        throw new KVMQueryError('Offset cannot be negative', { offset: this.config.offset });
+        throw new KVMQueryError("Offset cannot be negative", {
+          offset: this.config.offset,
+        });
       }
       if (this.config.offset) {
         results = results.slice(this.config.offset);
@@ -354,7 +369,9 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
 
       // Apply limit (after offset and filtering)
       if (this.config.limit && this.config.limit < 0) {
-        throw new KVMQueryError('Limit cannot be negative', { limit: this.config.limit });
+        throw new KVMQueryError("Limit cannot be negative", {
+          limit: this.config.limit,
+        });
       }
       if (this.config.limit) {
         results = results.slice(0, this.config.limit);
@@ -365,7 +382,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
       if (KVMErrorUtils.isKVMError(error)) {
         throw error;
       }
-      throw KVMErrorUtils.wrap(error as Error, 'read', this.entity.name);
+      throw KVMErrorUtils.wrap(error as Error, "read", this.entity.name);
     }
   }
 
@@ -374,59 +391,61 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    */
   private evaluateCondition(value: any, condition: WhereCondition): boolean {
     const fieldValue = (value as any)[condition.field];
-    
+
     switch (condition.operator) {
       case "equals":
       case "eq":
         return fieldValue === condition.value;
-        
+
       case "notEquals":
       case "ne":
         return fieldValue !== condition.value;
-        
+
       case "greaterThan":
       case "gt":
         return fieldValue > condition.value;
-        
+
       case "greaterThanOrEqual":
       case "gte":
         return fieldValue >= condition.value;
-        
+
       case "lessThan":
       case "lt":
         return fieldValue < condition.value;
-        
+
       case "lessThanOrEqual":
       case "lte":
         return fieldValue <= condition.value;
-        
+
       case "in":
-        return Array.isArray(condition.value) && condition.value.includes(fieldValue);
-        
+        return Array.isArray(condition.value) &&
+          condition.value.includes(fieldValue);
+
       case "notIn":
-        return Array.isArray(condition.value) && !condition.value.includes(fieldValue);
-        
+        return Array.isArray(condition.value) &&
+          !condition.value.includes(fieldValue);
+
       case "contains":
-        return typeof fieldValue === "string" && 
-               typeof condition.value === "string" && 
-               fieldValue.includes(condition.value);
-               
+        return typeof fieldValue === "string" &&
+          typeof condition.value === "string" &&
+          fieldValue.includes(condition.value);
+
       case "startsWith":
-        return typeof fieldValue === "string" && 
-               typeof condition.value === "string" && 
-               fieldValue.startsWith(condition.value);
-               
+        return typeof fieldValue === "string" &&
+          typeof condition.value === "string" &&
+          fieldValue.startsWith(condition.value);
+
       case "endsWith":
-        return typeof fieldValue === "string" && 
-               typeof condition.value === "string" && 
-               fieldValue.endsWith(condition.value);
-               
+        return typeof fieldValue === "string" &&
+          typeof condition.value === "string" &&
+          fieldValue.endsWith(condition.value);
+
       case "exists":
         return fieldValue !== undefined && fieldValue !== null;
-        
+
       case "notExists":
         return fieldValue === undefined || fieldValue === null;
-        
+
       default:
         return false;
     }

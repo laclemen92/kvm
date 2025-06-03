@@ -41,7 +41,7 @@ describe("Model-Based API", () => {
         email: z.string().email(),
       });
 
-      const User = kvm.model('users', {
+      const User = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });
@@ -58,12 +58,12 @@ describe("Model-Based API", () => {
         name: z.string(),
       });
 
-      const User1 = kvm.model('users', {
+      const User1 = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });
 
-      const User2 = kvm.model('users', {
+      const User2 = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });
@@ -77,12 +77,12 @@ describe("Model-Based API", () => {
         name: z.string(),
       });
 
-      const User = kvm.model('users', {
+      const User = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });
 
-      const retrievedUser = kvm.getModel('users');
+      const retrievedUser = kvm.getModel("users");
       expect(retrievedUser).toBe(User);
     });
 
@@ -92,7 +92,7 @@ describe("Model-Based API", () => {
         name: z.string(),
       });
 
-      kvm.model('users', {
+      kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });
@@ -114,7 +114,7 @@ describe("Model-Based API", () => {
         age: z.number(),
       });
 
-      User = kvm.model('users', {
+      User = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
         secondaryIndexes: [{
@@ -330,7 +330,7 @@ describe("Model-Based API", () => {
         name: z.string(),
       });
 
-      User = kvm.model('users', {
+      User = kvm.model("users", {
         schema: userSchema,
         primaryKey: [{ name: "users", key: "id" }],
       });

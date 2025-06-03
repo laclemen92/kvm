@@ -1,5 +1,9 @@
 import type { ZodRawShape } from "zod";
-import type { ModelDefinition, ModelConstructor, InferModel } from "./model-types.ts";
+import type {
+  InferModel,
+  ModelConstructor,
+  ModelDefinition,
+} from "./model-types.ts";
 import type { KVMEntity } from "./types.ts";
 import { createModelClass } from "./model.ts";
 
@@ -16,11 +20,13 @@ export class KVM {
    */
   model<TSchema extends ZodRawShape>(
     name: string,
-    definition: ModelDefinition<TSchema>
+    definition: ModelDefinition<TSchema>,
   ): ModelConstructor<InferModel<ModelDefinition<TSchema>["schema"]>> {
     // Check if model already exists
     if (this.models.has(name)) {
-      return this.models.get(name)! as ModelConstructor<InferModel<ModelDefinition<TSchema>["schema"]>>;
+      return this.models.get(name)! as ModelConstructor<
+        InferModel<ModelDefinition<TSchema>["schema"]>
+      >;
     }
 
     // Create KVMEntity from definition
@@ -33,10 +39,12 @@ export class KVM {
     };
 
     // Create model class
-    const ModelClass = createModelClass<InferModel<ModelDefinition<TSchema>["schema"]>>(
+    const ModelClass = createModelClass<
+      InferModel<ModelDefinition<TSchema>["schema"]>
+    >(
       name,
       entity,
-      this.kv
+      this.kv,
     );
 
     // Store model for future reference

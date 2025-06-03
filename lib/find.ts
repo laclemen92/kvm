@@ -1,6 +1,7 @@
-import { ValueType } from "./types.ts";
+import { RelationType, ValueType } from "./types.ts";
 import type {
   FindManyOptions,
+  IncludePath,
   KVMEntity,
   SecondaryIndex,
   StringKeyedValueObject,
@@ -193,3 +194,280 @@ export const findFirstOrThrow = async <T = unknown>(
 
   return result;
 };
+
+/**
+ * Helper function to eagerly load relations based on include paths
+ */
+export const eagerLoadRelations = async <T = unknown>(
+  entity: KVMEntity,
+  kv: Deno.Kv,
+  records: Deno.KvEntry<T>[],
+  includePaths?: IncludePath[],
+): Promise<Deno.KvEntry<T>[]> => {
+  if (!includePaths || includePaths.length === 0 || !entity.relations) {
+    return records;
+  }
+
+  // Process each include path
+  for (const includePath of includePaths) {
+    const path = typeof includePath === "string"
+      ? includePath
+      : includePath.path;
+
+    // Find the relation definition
+    const relation = entity.relations.find((rel) => rel.entityName === path);
+    if (!relation) {
+      continue; // Skip unknown relations
+    }
+
+    // Load related data for all records
+    for (const record of records) {
+      try {
+        await _eagerLoadRelation(entity, kv, record, relation, includePath);
+      } catch (error) {
+        // Ignore errors for individual relation loading
+        console.warn(`Failed to load relation ${path}:`, error);
+      }
+    }
+  }
+
+  return records;
+};
+
+/**
+ * Load a specific relation for a record
+ */
+async function _eagerLoadRelation<T>(
+  entity: KVMEntity,
+  kv: Deno.Kv,
+  record: Deno.KvEntry<T>,
+  relation: any,
+  includePath: IncludePath,
+): Promise<void> {
+  const value = record.value as any;
+  if (!value) return;
+
+  // Get the foreign key value(s) from the record
+  const foreignKeyValues = relation.fields.map((field: string) => value[field])
+    .filter(Boolean);
+  if (foreignKeyValues.length === 0) {
+    return;
+  }
+
+  // Handle different relation types
+  switch (relation.type) {
+    case RelationType.BELONGS_TO:
+      await _eagerLoadBelongsTo(
+        kv,
+        value,
+        relation,
+        foreignKeyValues[0],
+        includePath,
+      );
+      break;
+    case RelationType.ONE_TO_MANY:
+      await _eagerLoadOneToMany(
+        kv,
+        value,
+        relation,
+        foreignKeyValues,
+        includePath,
+      );
+      break;
+    case RelationType.MANY_TO_MANY:
+      await _eagerLoadManyToMany(
+        kv,
+        value,
+        relation,
+        foreignKeyValues,
+        includePath,
+      );
+      break;
+  }
+}
+
+/**
+ * Eager load a belongsTo relation
+ */
+async function _eagerLoadBelongsTo(
+  kv: Deno.Kv,
+  value: any,
+  relation: any,
+  foreignKeyValue: any,
+  includePath: IncludePath,
+): Promise<void> {
+  try {
+    const result = await findUnique(
+      {
+        name: relation.entityName,
+        primaryKey: [{ name: relation.entityName, key: "id" }],
+      } as KVMEntity,
+      kv,
+      foreignKeyValue,
+    );
+
+    if (result?.value) {
+      value[relation.entityName] = result.value;
+
+      // Handle nested includes
+      if (typeof includePath === "object" && includePath.include) {
+        const relatedEntity = {
+          name: relation.entityName,
+          primaryKey: [{ name: relation.entityName, key: "id" }],
+        } as KVMEntity;
+        await eagerLoadRelations(
+          relatedEntity,
+          kv,
+          [result],
+          includePath.include,
+        );
+      }
+    }
+  } catch (error) {
+    // Ignore not found errors
+  }
+}
+
+/**
+ * Eager load a hasMany/one-to-many relation
+ */
+async function _eagerLoadOneToMany(
+  kv: Deno.Kv,
+  value: any,
+  relation: any,
+  foreignKeyValues: any[],
+  includePath: IncludePath,
+): Promise<void> {
+  try {
+    const results = await findMany(
+      {
+        name: relation.entityName,
+        primaryKey: [{ name: relation.entityName }],
+      } as KVMEntity,
+      kv,
+      {
+        prefix: [relation.entityName],
+        limit: 100,
+      },
+    );
+
+    // Filter results that match the foreign key
+    const primaryKeyField = relation.foreignKey || "id";
+    const primaryKeyValue = value[primaryKeyField] || value.id;
+
+    const filteredResults = results.filter((result) => {
+      return relation.fields.some((field: string) =>
+        (result.value as any)?.[field] === primaryKeyValue
+      );
+    });
+
+    value[relation.entityName] = filteredResults.map((r) => r.value);
+
+    // Handle nested includes
+    if (typeof includePath === "object" && includePath.include) {
+      const relatedEntity = {
+        name: relation.entityName,
+        primaryKey: [{ name: relation.entityName }],
+      } as KVMEntity;
+      await eagerLoadRelations(
+        relatedEntity,
+        kv,
+        filteredResults,
+        includePath.include,
+      );
+    }
+  } catch (error) {
+    value[relation.entityName] = [];
+  }
+}
+
+/**
+ * Eager load a many-to-many relation
+ */
+async function _eagerLoadManyToMany(
+  kv: Deno.Kv,
+  value: any,
+  relation: any,
+  foreignKeyValues: any[],
+  includePath: IncludePath,
+): Promise<void> {
+  if (!relation.through) {
+    value[relation.entityName] = [];
+    return;
+  }
+
+  try {
+    // Get join table records
+    const joinResults = await findMany(
+      {
+        name: relation.through,
+        primaryKey: [{ name: relation.through }],
+      } as KVMEntity,
+      kv,
+      {
+        prefix: [relation.through],
+        limit: 100,
+      },
+    );
+
+    const primaryKeyValue = value.id;
+
+    // Find related IDs through the join table
+    const relatedIds: any[] = [];
+    for (const joinRecord of joinResults) {
+      const joinValue = joinRecord.value as any;
+      if (
+        joinValue &&
+        relation.fields.some((field: string) =>
+          joinValue[field] === primaryKeyValue
+        )
+      ) {
+        // Extract the other side's ID from the join record
+        const otherIdField = Object.keys(joinValue).find((key) =>
+          !relation.fields.includes(key) && key.endsWith("Id")
+        );
+        if (otherIdField && joinValue[otherIdField]) {
+          relatedIds.push(joinValue[otherIdField]);
+        }
+      }
+    }
+
+    // Fetch the actual related records
+    const relatedRecords = [];
+    for (const relatedId of relatedIds) {
+      try {
+        const result = await findUnique(
+          {
+            name: relation.entityName,
+            primaryKey: [{ name: relation.entityName, key: "id" }],
+          } as KVMEntity,
+          kv,
+          relatedId,
+        );
+        if (result?.value) {
+          relatedRecords.push(result);
+        }
+      } catch (error) {
+        // Ignore individual lookup failures
+      }
+    }
+
+    value[relation.entityName] = relatedRecords.map((r) => r.value);
+
+    // Handle nested includes
+    if (typeof includePath === "object" && includePath.include) {
+      const relatedEntity = {
+        name: relation.entityName,
+        primaryKey: [{ name: relation.entityName, key: "id" }],
+      } as KVMEntity;
+      await eagerLoadRelations(
+        relatedEntity,
+        kv,
+        relatedRecords,
+        includePath.include,
+      );
+    }
+  } catch (error) {
+    value[relation.entityName] = [];
+  }
+}

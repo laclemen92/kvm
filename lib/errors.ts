@@ -3,11 +3,11 @@
  */
 export abstract class KVMError extends Error {
   abstract readonly code: string;
-  
+
   constructor(message: string, public readonly context?: Record<string, any>) {
     super(message);
     this.name = this.constructor.name;
-    
+
     // Maintain proper stack trace for where our error was thrown (only available on V8)
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor);
@@ -32,15 +32,15 @@ export abstract class KVMError extends Error {
  * Thrown when data validation fails (e.g., Zod schema validation)
  */
 export class KVMValidationError extends KVMError {
-  readonly code = 'KVM_VALIDATION_ERROR';
+  readonly code = "KVM_VALIDATION_ERROR";
 
   constructor(
     public readonly field: string,
     public readonly value: any,
     public readonly rule: string,
-    public readonly modelName?: string
+    public readonly modelName?: string,
   ) {
-    const modelPrefix = modelName ? `${modelName}: ` : '';
+    const modelPrefix = modelName ? `${modelName}: ` : "";
     super(
       `${modelPrefix}Validation failed for field '${field}': ${rule}`,
       {
@@ -48,7 +48,7 @@ export class KVMValidationError extends KVMError {
         value,
         rule,
         modelName,
-      }
+      },
     );
   }
 }
@@ -57,24 +57,26 @@ export class KVMValidationError extends KVMError {
  * Thrown when a required record is not found
  */
 export class KVMNotFoundError extends KVMError {
-  readonly code = 'KVM_NOT_FOUND_ERROR';
+  readonly code = "KVM_NOT_FOUND_ERROR";
 
   constructor(
     public readonly modelName: string,
     public readonly identifier: string | Record<string, any>,
-    public readonly searchType: 'id' | 'unique' | 'first' | 'query' = 'id'
+    public readonly searchType: "id" | "unique" | "first" | "query" = "id",
   ) {
-    const identifierStr = typeof identifier === 'string' 
-      ? identifier 
+    const identifierStr = typeof identifier === "string"
+      ? identifier
       : JSON.stringify(identifier);
-    
+
     super(
-      `${modelName} not found${searchType !== 'query' ? ` by ${searchType}` : ''}: ${identifierStr}`,
+      `${modelName} not found${
+        searchType !== "query" ? ` by ${searchType}` : ""
+      }: ${identifierStr}`,
       {
         modelName,
         identifier,
         searchType,
-      }
+      },
     );
   }
 }
@@ -83,15 +85,19 @@ export class KVMNotFoundError extends KVMError {
  * Thrown when a database constraint is violated (e.g., unique constraint, foreign key)
  */
 export class KVMConstraintError extends KVMError {
-  readonly code = 'KVM_CONSTRAINT_ERROR';
+  readonly code = "KVM_CONSTRAINT_ERROR";
 
   constructor(
-    public readonly constraintType: 'unique' | 'foreign_key' | 'check' | 'not_null',
+    public readonly constraintType:
+      | "unique"
+      | "foreign_key"
+      | "check"
+      | "not_null",
     public readonly field: string,
     public readonly value: any,
-    public readonly modelName?: string
+    public readonly modelName?: string,
   ) {
-    const modelPrefix = modelName ? `${modelName}: ` : '';
+    const modelPrefix = modelName ? `${modelName}: ` : "";
     super(
       `${modelPrefix}Constraint violation (${constraintType}) on field '${field}' with value: ${value}`,
       {
@@ -99,7 +105,7 @@ export class KVMConstraintError extends KVMError {
         field,
         value,
         modelName,
-      }
+      },
     );
   }
 }
@@ -108,22 +114,27 @@ export class KVMConstraintError extends KVMError {
  * Thrown when an operation fails due to database/KV store issues
  */
 export class KVMOperationError extends KVMError {
-  readonly code = 'KVM_OPERATION_ERROR';
+  readonly code = "KVM_OPERATION_ERROR";
 
   constructor(
-    public readonly operation: 'create' | 'read' | 'update' | 'delete' | 'atomic',
+    public readonly operation:
+      | "create"
+      | "read"
+      | "update"
+      | "delete"
+      | "atomic",
     message: string,
     public readonly modelName?: string,
-    public readonly originalError?: Error
+    public readonly originalError?: Error,
   ) {
-    const modelPrefix = modelName ? `${modelName}: ` : '';
+    const modelPrefix = modelName ? `${modelName}: ` : "";
     super(
       `${modelPrefix}${operation} operation failed: ${message}`,
       {
         operation,
         modelName,
         originalError: originalError?.message,
-      }
+      },
     );
 
     // Preserve the original error's stack if available
@@ -137,17 +148,17 @@ export class KVMOperationError extends KVMError {
  * Thrown when there's a configuration or setup issue
  */
 export class KVMConfigurationError extends KVMError {
-  readonly code = 'KVM_CONFIGURATION_ERROR';
+  readonly code = "KVM_CONFIGURATION_ERROR";
 
   constructor(
     message: string,
-    public readonly configPath?: string
+    public readonly configPath?: string,
   ) {
     super(
-      `Configuration error${configPath ? ` in ${configPath}` : ''}: ${message}`,
+      `Configuration error${configPath ? ` in ${configPath}` : ""}: ${message}`,
       {
         configPath,
-      }
+      },
     );
   }
 }
@@ -156,9 +167,9 @@ export class KVMConfigurationError extends KVMError {
  * Thrown when attempting an operation on a connection that's been closed
  */
 export class KVMConnectionError extends KVMError {
-  readonly code = 'KVM_CONNECTION_ERROR';
+  readonly code = "KVM_CONNECTION_ERROR";
 
-  constructor(message: string = 'KV connection is closed or unavailable') {
+  constructor(message: string = "KV connection is closed or unavailable") {
     super(message);
   }
 }
@@ -167,25 +178,27 @@ export class KVMConnectionError extends KVMError {
  * Thrown when there's a concurrency conflict (e.g., optimistic locking failure)
  */
 export class KVMConcurrencyError extends KVMError {
-  readonly code = 'KVM_CONCURRENCY_ERROR';
+  readonly code = "KVM_CONCURRENCY_ERROR";
 
   constructor(
     public readonly operation: string,
     public readonly modelName?: string,
-    public readonly identifier?: string | Record<string, any>
+    public readonly identifier?: string | Record<string, any>,
   ) {
-    const modelPrefix = modelName ? `${modelName}: ` : '';
-    const identifierStr = identifier 
-      ? ` (${typeof identifier === 'string' ? identifier : JSON.stringify(identifier)})`
-      : '';
-    
+    const modelPrefix = modelName ? `${modelName}: ` : "";
+    const identifierStr = identifier
+      ? ` (${
+        typeof identifier === "string" ? identifier : JSON.stringify(identifier)
+      })`
+      : "";
+
     super(
       `${modelPrefix}Concurrency conflict during ${operation}${identifierStr}`,
       {
         operation,
         modelName,
         identifier,
-      }
+      },
     );
   }
 }
@@ -194,13 +207,69 @@ export class KVMConcurrencyError extends KVMError {
  * Thrown when query syntax or parameters are invalid
  */
 export class KVMQueryError extends KVMError {
-  readonly code = 'KVM_QUERY_ERROR';
+  readonly code = "KVM_QUERY_ERROR";
 
   constructor(
     message: string,
-    public readonly queryContext?: Record<string, any>
+    public readonly queryContext?: Record<string, any>,
   ) {
     super(`Query error: ${message}`, { queryContext });
+  }
+}
+
+/**
+ * Thrown when batch operations encounter validation errors
+ */
+export class KVMBatchValidationError extends KVMError {
+  readonly code = "KVM_BATCH_VALIDATION_ERROR";
+
+  constructor(
+    public readonly results: {
+      valid: any[];
+      invalid: Array<{ data: any; errors: any[]; index: number }>;
+      stats: { total: number; valid: number; invalid: number };
+    },
+    public readonly modelName?: string,
+  ) {
+    const modelPrefix = modelName ? `${modelName}: ` : "";
+    super(
+      `${modelPrefix}Batch validation failed: ${results.invalid.length} of ${results.stats.total} items invalid`,
+      {
+        validCount: results.stats.valid,
+        invalidCount: results.stats.invalid,
+        totalCount: results.stats.total,
+        modelName,
+      },
+    );
+  }
+}
+
+/**
+ * Thrown when batch operations partially fail
+ */
+export class KVMBatchOperationError extends KVMError {
+  readonly code = "KVM_BATCH_OPERATION_ERROR";
+
+  constructor(
+    public readonly operation: "create" | "update" | "delete",
+    public readonly succeeded: number,
+    public readonly failed: number,
+    public readonly errors: Array<
+      { data?: any; key?: any; error: Error; index: number }
+    >,
+    public readonly modelName?: string,
+  ) {
+    const modelPrefix = modelName ? `${modelName}: ` : "";
+    super(
+      `${modelPrefix}Batch ${operation} partially failed: ${succeeded} succeeded, ${failed} failed`,
+      {
+        operation,
+        succeeded,
+        failed,
+        totalErrors: errors.length,
+        modelName,
+      },
+    );
   }
 }
 
@@ -250,18 +319,26 @@ export class KVMErrorUtils {
     return error instanceof KVMQueryError;
   }
 
+  static isBatchValidationError(error: any): error is KVMBatchValidationError {
+    return error instanceof KVMBatchValidationError;
+  }
+
+  static isBatchOperationError(error: any): error is KVMBatchOperationError {
+    return error instanceof KVMBatchOperationError;
+  }
+
   /**
    * Wrap a non-KVM error in a KVM error
    */
   static wrap(
     error: Error,
-    operation: 'create' | 'read' | 'update' | 'delete' | 'atomic',
-    modelName?: string
+    operation: "create" | "read" | "update" | "delete" | "atomic",
+    modelName?: string,
   ): KVMOperationError {
     if (KVMErrorUtils.isKVMError(error)) {
       return error as KVMOperationError;
     }
-    
+
     return new KVMOperationError(operation, error.message, modelName, error);
   }
 
@@ -270,22 +347,22 @@ export class KVMErrorUtils {
    */
   static fromZodError(
     zodError: any,
-    modelName?: string
+    modelName?: string,
   ): KVMValidationError {
     if (zodError.errors && zodError.errors.length > 0) {
       const firstError = zodError.errors[0];
-      const field = firstError.path?.join('.') || 'unknown';
-      const rule = firstError.message || 'validation failed';
+      const field = firstError.path?.join(".") || "unknown";
+      const rule = firstError.message || "validation failed";
       const value = firstError.received;
-      
+
       return new KVMValidationError(field, value, rule, modelName);
     }
-    
+
     return new KVMValidationError(
-      'unknown',
+      "unknown",
       undefined,
-      zodError.message || 'Schema validation failed',
-      modelName
+      zodError.message || "Schema validation failed",
+      modelName,
     );
   }
 
@@ -296,13 +373,13 @@ export class KVMErrorUtils {
     if (KVMErrorUtils.isKVMError(error)) {
       return error.message;
     }
-    
+
     // Handle common non-KVM errors
-    if (error.name === 'ZodError') {
-      return 'Invalid data provided';
+    if (error.name === "ZodError") {
+      return "Invalid data provided";
     }
-    
-    return 'An unexpected error occurred';
+
+    return "An unexpected error occurred";
   }
 
   /**
@@ -312,16 +389,16 @@ export class KVMErrorUtils {
     if (KVMErrorUtils.isConnectionError(error)) {
       return true;
     }
-    
+
     if (KVMErrorUtils.isConcurrencyError(error)) {
       return true;
     }
-    
+
     if (KVMErrorUtils.isOperationError(error)) {
       // Some operation errors might be transient
-      return error.operation === 'atomic';
+      return error.operation === "atomic";
     }
-    
+
     return false;
   }
 }
