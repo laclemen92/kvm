@@ -71,7 +71,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
   /**
    * Save changes to this document
    */
-  async save(): Promise<this> {
+  async save(options?: UpdateOptions): Promise<this> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
 
@@ -80,6 +80,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       operation: "save",
       document: this,
       input: this as any,
+      options,
     };
 
     try {
@@ -91,6 +92,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         ModelClass.kv,
         primaryKeyValue,
         this as any,
+        options,
       );
 
       if (result?.value) {
@@ -161,7 +163,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
 
       Object.assign(this, data);
 
-      const result = await this.save();
+      const result = await this.save(options);
 
       // Execute post-update hooks
       await ModelClass.hooks.executePostHooks("update", context, result, this);

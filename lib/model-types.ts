@@ -57,7 +57,7 @@ export interface FindOptions {
  * Model document with instance methods
  */
 export interface ModelDocument<T = any> {
-  save(): Promise<this>;
+  save(options?: UpdateOptions): Promise<this>;
   delete(options?: DeleteOptions): Promise<void>;
   update(data: Partial<T>, options?: UpdateOptions): Promise<this>;
   reload(): Promise<this>;

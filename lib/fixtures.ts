@@ -570,3 +570,49 @@ export const enhancedAuthorEntity: KVMEntity<typeof authorSchema.shape> = {
   }],
   schema: authorSchema,
 };
+
+// ============================================================================
+// TTL Examples
+// ============================================================================
+
+// Session entity for demonstrating TTL functionality
+const sessionSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  token: z.string(),
+  createdAt: z.date().optional(),
+}).strict();
+
+export const sessionEntity: KVMEntity<typeof sessionSchema.shape> = {
+  name: "sessions",
+  primaryKey: [{
+    name: "sessions",
+    key: "id",
+  }],
+  secondaryIndexes: [{
+    name: "sessions_by_user",
+    key: [{
+      name: "sessions_by_user",
+      key: "userId",
+    }],
+    valueType: ValueType.KEY,
+    valueKey: "id",
+  }],
+  schema: sessionSchema,
+};
+
+// Cache entity for demonstrating TTL with caching patterns
+const cacheSchema = z.object({
+  key: z.string(),
+  value: z.any(),
+  createdAt: z.date().optional(),
+}).strict();
+
+export const cacheEntity: KVMEntity<typeof cacheSchema.shape> = {
+  name: "cache",
+  primaryKey: [{
+    name: "cache",
+    key: "key",
+  }],
+  schema: cacheSchema,
+};

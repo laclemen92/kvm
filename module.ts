@@ -115,6 +115,17 @@ export type {
 } from "./lib/query-types.ts";
 export { KVMQueryBuilder } from "./lib/query-builder.ts";
 
+// TTL Utilities
+export {
+  TTL,
+  TTLConfig,
+  withTTL,
+  sessionTTL,
+  cacheTTL,
+  tokenTTL,
+  temporaryTTL,
+} from "./lib/ttl-utils.ts";
+
 // Error Handling
 export {
   KVMBatchOperationError,
