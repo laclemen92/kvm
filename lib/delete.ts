@@ -39,23 +39,26 @@ export const deleteKey = async <T = unknown>(
     if (options && options.cascadeDelete) {
       const value: T | null = found && found.value ? found.value : null;
 
-      await kv.delete(pk);
+      // Use atomic operation for all cascade deletes
+      const atomic = kv.atomic();
+      
+      // Delete primary key
+      atomic.delete(pk);
 
+      // Delete secondary indexes
       if (entity.secondaryIndexes) {
-        entity.secondaryIndexes.forEach(
-          async (secondaryIndex: SecondaryIndex) => {
-            const secondaryIndexKey: Deno.KvKey = buildPrimaryKey(
-              secondaryIndex.key,
-              value,
-            );
-
-            await kv.delete(secondaryIndexKey);
-          },
-        );
+        entity.secondaryIndexes.forEach((secondaryIndex: SecondaryIndex) => {
+          const secondaryIndexKey: Deno.KvKey = buildPrimaryKey(
+            secondaryIndex.key,
+            value,
+          );
+          atomic.delete(secondaryIndexKey);
+        });
       }
 
+      // Delete relations
       if (entity.relations) {
-        entity.relations.forEach(async (relation: Relation) => {
+        entity.relations.forEach((relation: Relation) => {
           if (
             relation.type === "one-to-many" &&
             isStringKeyedValueObject(value)
@@ -67,10 +70,14 @@ export const deleteKey = async <T = unknown>(
               }),
               ...pk,
             ];
-
-            await kv.delete(relationKey);
+            atomic.delete(relationKey);
           }
         });
+      }
+
+      const result = await atomic.commit();
+      if (!result.ok) {
+        throw new Error(`Failed to delete ${entity.name}`);
       }
 
       return found;
