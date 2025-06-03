@@ -1,4 +1,5 @@
 import type { ZodObject, ZodRawShape } from "zod";
+import { z } from "zod";
 import type {
   FindManyOptions,
   IncludePath,
@@ -17,6 +18,7 @@ import type {
   BatchUpdateResult,
 } from "./batch-types.ts";
 import type {
+  HookManager,
   HookOptions,
   HookType,
   Plugin,
@@ -91,20 +93,6 @@ export interface ModelStatic<T = any> {
   findMany(options?: FindManyOptions): Promise<(ModelDocument<T> & T)[]>;
   findFirst(options?: FindManyOptions): Promise<(ModelDocument<T> & T) | null>;
   findFirstOrThrow(options?: FindManyOptions): Promise<ModelDocument<T> & T>;
-  updateMany(
-    updates: Array<{
-      key: string | Deno.KvKeyPart;
-      data: Partial<T>;
-      options?: UpdateOptions;
-    }>,
-  ): Promise<(ModelDocument<T> & T)[]>;
-  deleteMany(
-    keys: Array<{
-      key: string | Deno.KvKeyPart;
-      options?: DeleteOptions;
-    }>,
-  ): Promise<(ModelDocument<T> & T)[]>;
-
   // Query Builder methods
   where(field: keyof T): WhereClause<T>;
   where(field: string): WhereClause<T>;
@@ -146,10 +134,10 @@ export interface ModelConstructor<T = any> extends ModelStatic<T> {
   entity: KVMEntity;
   kv: Deno.Kv;
   modelName: string;
+  hooks: HookManager<T>;
 }
 
 /**
  * Type to infer the TypeScript type from a Zod schema
  */
-export type InferModel<TSchema extends ZodObject<any>> = TSchema extends
-  ZodObject<infer T> ? T : never;
+export type InferModel<TSchema extends ZodObject<any>> = z.infer<TSchema>;

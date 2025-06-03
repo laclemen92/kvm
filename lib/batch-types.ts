@@ -93,6 +93,12 @@ export interface BatchDeleteOptions extends DeleteOptions {
   returnDeletedItems?: boolean;
 
   /**
+   * If true, returns partial results even if some operations fail.
+   * @default false
+   */
+  returnPartialResults?: boolean;
+
+  /**
    * Maximum number of items to process in a single batch.
    */
   batchSize?: number;
@@ -115,7 +121,7 @@ export interface ValidationResult<T> {
   /**
    * Validation errors if any
    */
-  errors?: Array<{
+  errors: Array<{
     field: string;
     message: string;
     rule: string;

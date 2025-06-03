@@ -76,14 +76,14 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "save",
-      document: this,
+      document: this as any,
       input: this as any,
       options,
     };
 
     try {
       // Execute pre-save hooks
-      await ModelClass.hooks.executePreHooks("save", context, this);
+      await ModelClass.hooks.executePreHooks("save", context, this as any);
 
       const result = await update<T>(
         ModelClass.entity,
@@ -98,7 +98,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       }
 
       // Execute post-save hooks
-      await ModelClass.hooks.executePostHooks("save", context, result, this);
+      await ModelClass.hooks.executePostHooks("save", context, result, this as any);
 
       return this;
     } catch (error) {
@@ -119,13 +119,13 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "delete",
-      document: this,
+      document: this as any,
       options,
     };
 
     try {
       // Execute pre-delete hooks
-      await ModelClass.hooks.executePreHooks("delete", context, this);
+      await ModelClass.hooks.executePreHooks("delete", context, this as any);
 
       await deleteKey<T>(
         ModelClass.entity,
@@ -135,7 +135,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       );
 
       // Execute post-delete hooks
-      await ModelClass.hooks.executePostHooks("delete", context, true, this);
+      await ModelClass.hooks.executePostHooks("delete", context, true, this as any);
     } catch (error) {
       throw KVMErrorUtils.wrap(error as Error, "delete", ModelClass.modelName);
     }
@@ -150,21 +150,21 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "update",
-      document: this,
+      document: this as any,
       input: data,
       options,
     };
 
     try {
       // Execute pre-update hooks
-      await ModelClass.hooks.executePreHooks("update", context, this);
+      await ModelClass.hooks.executePreHooks("update", context, this as any);
 
       Object.assign(this, data);
 
       const result = await this.save(options);
 
       // Execute post-update hooks
-      await ModelClass.hooks.executePostHooks("update", context, result, this);
+      await ModelClass.hooks.executePostHooks("update", context, result, this as any);
 
       return result;
     } catch (error) {
@@ -571,11 +571,11 @@ export function createModelClass<T = any>(
         }
 
         // Handle eager loading if include options are provided
-        if (options?.include) {
+        if (options?.include && result?.value !== null) {
           await eagerLoadRelations(
             this.entity,
             this.kv,
-            [result],
+            [result as Deno.KvEntry<T>],
             options.include,
           );
         }
@@ -616,7 +616,7 @@ export function createModelClass<T = any>(
     static async findUnique(
       key: string | Deno.KvKeyPart | Record<string, any>,
       secondaryIndexName?: string,
-      includeValue?: boolean,
+      includeValue: boolean = true,
     ): Promise<(DynamicModel & T) | null> {
       try {
         const result = await findUnique<T>(
@@ -657,7 +657,7 @@ export function createModelClass<T = any>(
       if (!result) {
         throw new KVMNotFoundError(
           modelName,
-          key,
+          key as string | Record<string, any>,
           secondaryIndexName ? "unique" : "id",
         );
       }
@@ -709,11 +709,11 @@ export function createModelClass<T = any>(
         }
 
         // Handle eager loading if include options are provided
-        if (options?.include) {
+        if (options?.include && result?.value !== null) {
           await eagerLoadRelations(
             this.entity,
             this.kv,
-            [result],
+            [result as Deno.KvEntry<T>],
             options.include,
           );
         }

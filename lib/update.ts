@@ -28,21 +28,17 @@ export const update = async <T = unknown>(
   // do logic here to do all the setting for us
   // should it matter if it is an update or create? yea it does cause if it is an update, we can spread
   const pk: Deno.KvKey = buildPrimaryKey(entity.primaryKey, id);
-  let valueToUpdate = value;
-
   const currentValue = await findUnique<T>(entity, kv, id);
 
   if (!currentValue?.value) {
     throw new Error("Record not found");
   }
 
-  if (options?.onlyChangedFields) {
-    // get the current value
-    valueToUpdate = {
-      ...currentValue?.value,
-      ...value,
-    };
-  }
+  // Always merge with existing data for partial updates
+  const valueToUpdate = {
+    ...currentValue.value,
+    ...value,
+  } as T;
 
   // Validate the final value against the schema
   entity.schema.parse(valueToUpdate);

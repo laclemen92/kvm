@@ -243,7 +243,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       expect(executionOrder).toEqual([
         "pre-create",
@@ -287,7 +287,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       await user.update({ name: "Jane Doe" });
 
@@ -326,7 +326,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       await user.delete();
 
@@ -363,7 +363,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       const found = await User.findById("user1");
 
@@ -396,7 +396,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       expect(user.createdAt).toBeInstanceOf(Date);
       expect(user.updatedAt).toBeInstanceOf(Date);
@@ -443,7 +443,7 @@ describe("Middleware/Hooks System", () => {
         name: "John Doe",
         email: "john@example.com",
         age: 25,
-      } as UserType);
+      });
 
       expect(user.name).toBe("John Doe");
 
@@ -453,7 +453,7 @@ describe("Middleware/Hooks System", () => {
         name: "Jane Doe",
         email: "jane@example.com",
         age: 16,
-      } as UserType)).rejects.toThrow();
+      })).rejects.toThrow();
     });
 
     it("should apply audit plugin correctly", async () => {
@@ -481,7 +481,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       expect(user.createdBy).toBe("admin-user");
 
@@ -514,7 +514,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType)).rejects.toThrow("Pre-create hook failed");
+      })).rejects.toThrow("Pre-create hook failed");
     });
 
     it("should allow disabling hooks", async () => {
@@ -545,7 +545,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       expect(hookExecuted).toBe(false);
 
@@ -557,7 +557,7 @@ describe("Middleware/Hooks System", () => {
         id: "user2",
         name: "Jane Doe",
         email: "jane@example.com",
-      } as UserType);
+      });
 
       expect(hookExecuted).toBe(true);
     });
@@ -590,7 +590,7 @@ describe("Middleware/Hooks System", () => {
         id: "user1",
         name: "John Doe",
         email: "john@example.com",
-      } as UserType);
+      });
 
       expect(user.processedBy).toBe("async-hook");
     });

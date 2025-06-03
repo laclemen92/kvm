@@ -48,8 +48,8 @@ export async function validateBatch<T>(
     } catch (error) {
       const validationErrors = [];
 
-      if (error.name === "ZodError" && error.errors) {
-        for (const zodError of error.errors) {
+      if ((error as any).name === "ZodError" && (error as any).errors) {
+        for (const zodError of (error as any).errors) {
           validationErrors.push({
             field: zodError.path?.join(".") || "unknown",
             message: zodError.message,
@@ -60,7 +60,7 @@ export async function validateBatch<T>(
       } else {
         validationErrors.push({
           field: "unknown",
-          message: error.message || "Validation failed",
+          message: (error as any).message || "Validation failed",
           rule: "unknown",
         });
       }
@@ -117,9 +117,9 @@ export async function createMany<T>(
         result.failed.push({
           data: invalid.data,
           error: new KVMValidationError(
-            invalid.errors[0].field,
-            invalid.errors[0].value,
-            invalid.errors[0].message,
+            invalid.errors?.[0]?.field || "unknown",
+            invalid.errors?.[0]?.value,
+            invalid.errors?.[0]?.message || "Validation failed",
             modelName,
           ),
           index: invalid.index,
@@ -181,7 +181,7 @@ export async function createMany<T>(
           if (entity.relations) {
             for (const relation of entity.relations) {
               const relationKey = buildPrimaryKey(
-                relation.key || entity.primaryKey,
+                entity.primaryKey,
                 item,
               );
 
@@ -468,22 +468,31 @@ export async function updateMany<T>(
             result.stats.notFound++;
           }
         } catch (error) {
-          result.failed.push({
-            key: updateItem.key,
-            data: updateItem.data,
-            error: error as Error,
-            index: updates.indexOf(updateItem),
-          });
-          result.stats.failed++;
+          // Check if it's a "Record not found" error
+          if ((error as Error).message === "Record not found") {
+            result.notFound.push({
+              key: updateItem.key,
+              index: updates.indexOf(updateItem),
+            });
+            result.stats.notFound++;
+          } else {
+            result.failed.push({
+              key: updateItem.key,
+              data: updateItem.data,
+              error: error as Error,
+              index: updates.indexOf(updateItem),
+            });
+            result.stats.failed++;
 
-          if (!continueOnError) {
-            throw new KVMBatchOperationError(
-              "update",
-              result.stats.updated,
-              result.stats.failed,
-              result.failed,
-              modelName,
-            );
+            if (!continueOnError) {
+              throw new KVMBatchOperationError(
+                "update",
+                result.stats.updated,
+                result.stats.failed,
+                result.failed,
+                modelName,
+              );
+            }
           }
         }
       }
@@ -520,6 +529,7 @@ export async function deleteMany<T>(
     atomic = true,
     continueOnError = false,
     returnDeletedItems = false,
+    returnPartialResults = false,
     cascadeDelete = false,
     batchSize,
   } = options;
@@ -602,7 +612,7 @@ export async function deleteMany<T>(
             ) {
               for (const relation of entity.relations) {
                 const relationKey = buildPrimaryKey(
-                  relation.key || entity.primaryKey,
+                  entity.primaryKey,
                   existing,
                 );
                 atomicOp.delete(relationKey);
@@ -656,12 +666,12 @@ export async function deleteMany<T>(
             entity,
             kv,
             deleteItem.key,
-            deleteItem.options || { cascadeDelete },
+            { cascadeDelete: deleteItem.options?.cascadeDelete ?? cascadeDelete ?? false },
           );
 
           if (deleted) {
             if (returnDeletedItems && existing?.value) {
-              result.deleted.push(existing.value);
+              result.deleted.push(existing.value as T);
             }
             result.deletedCount++;
             result.stats.deleted++;

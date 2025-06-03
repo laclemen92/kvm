@@ -88,7 +88,7 @@ export const postEntity: KVMEntity<typeof postSchema.shape> = {
     entityName: userEntity.name,
     fields: ["userId"],
     valueType: ValueType.VALUE,
-    type: "one-to-many",
+    type: RelationType.ONE_TO_MANY,
   }],
   schema: postSchema,
 };
@@ -105,7 +105,7 @@ export const commentEntity: KVMEntity<typeof commentSchema.shape> = {
       entityName: postEntity.name, //postEntity,
       fields: ["postId"],
       valueType: ValueType.VALUE,
-      type: "one-to-many",
+      type: RelationType.ONE_TO_MANY,
     },
   ],
   primaryKey: [{
@@ -189,7 +189,7 @@ export const categoryEntity: KVMEntity<typeof categorySchema.shape> = {
     {
       entityName: "posts",
       fields: ["postId"],
-      type: ValueType.KEY,
+      type: RelationType.BELONGS_TO,
     },
   ],
   secondaryIndexes: [{
@@ -225,7 +225,7 @@ export const manyProductEntity: KVMEntity<typeof manyProductSchema.shape> = {
     {
       entityName: "categories",
       fields: ["categoryId"],
-      type: ValueType.KEY,
+      type: RelationType.BELONGS_TO,
     },
   ],
   // secondaryIndexes: [{

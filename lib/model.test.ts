@@ -167,7 +167,7 @@ describe("Model-Based API", () => {
 
     it("should throw when findByIdOrThrow doesn't find document", async () => {
       await expect(User.findByIdOrThrow("nonexistent"))
-        .rejects.toThrow("users with id 'nonexistent' not found");
+        .rejects.toThrow("users not found by id: nonexistent");
     });
 
     it("should find document by secondary index", async () => {
@@ -260,10 +260,9 @@ describe("Model-Based API", () => {
       });
 
       // Simulate external change
-      await User.create({
-        id: "user1",
+      const externalUser = await User.findById("user1");
+      await externalUser.update({
         name: "John Modified",
-        email: "john@example.com",
         age: 35,
       });
 
@@ -302,22 +301,22 @@ describe("Model-Based API", () => {
       });
 
       // Test updateMany
-      const updated = await User.updateMany([
+      const updateResult = await User.updateMany([
         { key: "user1", data: { age: 31 } },
         { key: "user2", data: { age: 26 } },
       ]);
 
-      expect(updated).toHaveLength(2);
-      expect(updated[0].age).toBe(31);
-      expect(updated[1].age).toBe(26);
+      expect(updateResult.updated).toHaveLength(2);
+      expect(updateResult.updated[0].age).toBe(31);
+      expect(updateResult.updated[1].age).toBe(26);
 
       // Test deleteMany
-      const deleted = await User.deleteMany([
+      const deleteResult = await User.deleteMany([
         { key: "user1" },
         { key: "user2" },
       ]);
 
-      expect(deleted).toHaveLength(2);
+      expect(deleteResult.deletedCount).toBe(2);
     });
   });
 
@@ -342,8 +341,19 @@ describe("Model-Based API", () => {
       const mockKv = {
         ...originalKv,
         atomic: () => ({
-          set: () => ({ commit: async () => ({ ok: false }) }),
+          set: () => {},
+          check: () => {},
+          delete: () => {},
+          sum: () => {},
+          min: () => {},
+          max: () => {},
           commit: async () => ({ ok: false }),
+        }),
+        get: async () => ({ value: null, key: [], versionstamp: null }),
+        list: () => ({
+          [Symbol.asyncIterator]: async function* () {
+            // Empty iterator
+          },
         }),
       } as unknown as Deno.Kv;
 
@@ -351,7 +361,7 @@ describe("Model-Based API", () => {
       (User as any).kv = mockKv;
 
       await expect(User.create({ id: "user1", name: "John" }))
-        .rejects.toThrow("Failed to create users");
+        .rejects.toThrow("Failed to create users: key already exists");
 
       // Restore original KV
       (User as any).kv = originalKv;
@@ -359,12 +369,12 @@ describe("Model-Based API", () => {
 
     it("should handle findUniqueOrThrow errors", async () => {
       await expect(User.findUniqueOrThrow("nonexistent"))
-        .rejects.toThrow("Not found");
+        .rejects.toThrow("users not found by id: nonexistent");
     });
 
     it("should handle findFirstOrThrow errors", async () => {
       await expect(User.findFirstOrThrow())
-        .rejects.toThrow("Not found");
+        .rejects.toThrow("users not found by first");
     });
   });
 });

@@ -107,28 +107,24 @@ export const create = async <T = unknown>(
     operation.set(key, value, options);
   });
 
-  try {
-    const res = await operation.commit();
-    if (!res.ok) {
-      throw new Error(`Failed to create ${entity.name}`);
-    }
-    // return res;
-
-    let findKey: Deno.KvKey | Deno.KvKeyPart | null = null;
-    if (entity.primaryKey[0].key && isStringKeyedValueObject(value)) {
-      findKey = value[entity.primaryKey[0].key];
-    } else if (isDenoKvKeyPart(value)) {
-      findKey = value;
-    }
-    if (!findKey) {
-      throw new Error("couldn't find key");
-    }
-    const created = await findUnique<T>(entity, kv, findKey);
-    return created;
-  } catch (e) {
-    console.error(e);
-    return null;
+  const res = await operation.commit();
+  if (!res.ok) {
+    // For duplicate key scenarios, provide a more specific error
+    throw new Error(`Failed to create ${entity.name}: key already exists`);
   }
+  // return res;
+
+  let findKey: Deno.KvKey | Deno.KvKeyPart | null = null;
+  if (entity.primaryKey[0].key && isStringKeyedValueObject(value)) {
+    findKey = value[entity.primaryKey[0].key];
+  } else if (isDenoKvKeyPart(value)) {
+    findKey = value;
+  }
+  if (!findKey) {
+    throw new Error("couldn't find key");
+  }
+  const created = await findUnique<T>(entity, kv, findKey);
+  return created;
 };
 
 /**

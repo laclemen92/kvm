@@ -75,7 +75,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
     this.hooks.push(hook);
 
     // Sort hooks by priority (higher priority first)
-    this.hooks.sort((a, b) => b.options.priority - a.options.priority);
+    this.hooks.sort((a, b) => (b.options.priority || 0) - (a.options.priority || 0));
   }
 
   /**
@@ -209,7 +209,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new HookTimeoutError(hook.id, hook.options.timeout));
+        reject(new HookTimeoutError(hook.id, hook.options.timeout || 0));
       }, hook.options.timeout);
 
       const next = (error?: Error) => {
@@ -240,9 +240,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
         if (result && typeof result.then === "function") {
           result.then(() => {
             // If the hook didn't call next(), call it automatically
-            if (!timeoutId._destroyed) {
-              next();
-            }
+            next();
           }).catch(next);
         }
       } catch (error) {
@@ -344,7 +342,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new HookTimeoutError(hook.id, hook.options.timeout));
+        reject(new HookTimeoutError(hook.id, hook.options.timeout || 0));
       }, hook.options.timeout);
 
       try {

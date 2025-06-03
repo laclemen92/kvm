@@ -50,13 +50,13 @@ describe("Query Builder Integration", () => {
 
     // Create test data
     await User.create(
-      { id: "user1", name: "John", age: 25, status: "active" } as UserType,
+      { id: "user1", name: "John", age: 25, status: "active" },
     );
     await User.create(
-      { id: "user2", name: "Jane", age: 30, status: "active" } as UserType,
+      { id: "user2", name: "Jane", age: 30, status: "active" },
     );
     await User.create(
-      { id: "user3", name: "Bob", age: 35, status: "inactive" } as UserType,
+      { id: "user3", name: "Bob", age: 35, status: "inactive" },
     );
 
     // Test equals query
@@ -104,10 +104,10 @@ describe("Query Builder Integration", () => {
     });
 
     await User.create(
-      { id: "user1", name: "John", age: 25, status: "active" } as UserType,
+      { id: "user1", name: "John", age: 25, status: "active" },
     );
     await User.create(
-      { id: "user2", name: "Jane", age: 30, status: "active" } as UserType,
+      { id: "user2", name: "Jane", age: 30, status: "active" },
     );
 
     // Test object-style where
@@ -133,9 +133,9 @@ describe("Query Builder Integration", () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "Alice", age: 25 } as UserType);
-    await User.create({ id: "user2", name: "Bob", age: 30 } as UserType);
-    await User.create({ id: "user3", name: "Charlie", age: 35 } as UserType);
+    await User.create({ id: "user1", name: "Alice", age: 25 });
+    await User.create({ id: "user2", name: "Bob", age: 30 });
+    await User.create({ id: "user3", name: "Charlie", age: 35 });
 
     // Test ordering
     const sortedUsers = await User
@@ -189,17 +189,17 @@ describe("Query Builder Integration", () => {
         id: "user1",
         name: "John Smith",
         email: "john@example.com",
-      } as UserType,
+      },
     );
     await User.create(
-      { id: "user2", name: "Jane Doe", email: "jane@test.com" } as UserType,
+      { id: "user2", name: "Jane Doe", email: "jane@test.com" },
     );
     await User.create(
       {
         id: "user3",
         name: "Bob Johnson",
         email: "bob@example.com",
-      } as UserType,
+      },
     );
 
     // Test contains
@@ -243,13 +243,13 @@ describe("Query Builder Integration", () => {
     });
 
     await User.create(
-      { id: "user1", name: "John", age: 25, status: "active" } as UserType,
+      { id: "user1", name: "John", age: 25, status: "active" },
     );
     await User.create(
-      { id: "user2", name: "Jane", age: 30, status: "pending" } as UserType,
+      { id: "user2", name: "Jane", age: 30, status: "pending" },
     );
     await User.create(
-      { id: "user3", name: "Bob", age: 35, status: "inactive" } as UserType,
+      { id: "user3", name: "Bob", age: 35, status: "inactive" },
     );
 
     // Test in operation
@@ -291,8 +291,8 @@ describe("Query Builder Integration", () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "John", age: 25 } as UserType);
-    await User.create({ id: "user2", name: "Jane", age: 30 } as UserType);
+    await User.create({ id: "user1", name: "John", age: 25 });
+    await User.create({ id: "user2", name: "Jane", age: 30 });
 
     // Test findOne
     const user = await User
@@ -340,8 +340,8 @@ describe("Query Builder Integration", () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "John", age: 25 } as UserType);
-    await User.create({ id: "user2", name: "Jane", age: 30 } as UserType);
+    await User.create({ id: "user1", name: "John", age: 25 });
+    await User.create({ id: "user2", name: "Jane", age: 30 });
 
     const baseQuery = User
       .where("age")

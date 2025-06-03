@@ -10,7 +10,7 @@ import { z } from "zod";
 import { createKVM } from "./kvm.ts";
 import type { KVM } from "./kvm.ts";
 import { KVMErrorUtils } from "./errors.ts";
-import { ValueType } from "./types.ts";
+import { RelationType, ValueType } from "./types.ts";
 
 describe("Batch Operations", () => {
   let kvm: KVM;
@@ -94,7 +94,7 @@ describe("Batch Operations", () => {
         { id: "user1", name: "John", email: "john@example.com", age: 25 },
         { id: "user2", name: "Jane", email: "invalid-email", age: 30 }, // Invalid email
         { id: "user3", name: "Bob", email: "bob@example.com", age: -5 }, // Negative age
-      ] as UserType[];
+      ];
 
       const result = await User.createMany(users, {
         continueOnError: true,
@@ -131,7 +131,7 @@ describe("Batch Operations", () => {
 
       const users = [
         { id: "user1", name: "John", email: "invalid" },
-      ] as UserType[];
+      ];
 
       await expect(User.createMany(users))
         .rejects.toThrow();
@@ -161,10 +161,10 @@ describe("Batch Operations", () => {
       });
 
       // Create a user first
-      await User.create({ id: "user1", name: "John" } as UserType);
+      await User.create({ id: "user1", name: "John" });
 
       // Try to create with duplicate key
-      const users: UserType[] = [
+      const users = [
         { id: "user1", name: "Duplicate" }, // Will fail
         { id: "user2", name: "Jane" },
       ];
@@ -191,9 +191,9 @@ describe("Batch Operations", () => {
       });
 
       // Create a user first
-      await User.create({ id: "user1", name: "John" } as UserType);
+      await User.create({ id: "user1", name: "John" });
 
-      const users: UserType[] = [
+      const users = [
         { id: "user1", name: "Duplicate" }, // Will fail
         { id: "user2", name: "Jane" }, // Should succeed
         { id: "user3", name: "Bob" }, // Should succeed
@@ -236,7 +236,7 @@ describe("Batch Operations", () => {
         }],
       });
 
-      const users: UserType[] = [
+      const users = [
         { id: "user1", email: "john@example.com", name: "John" },
         { id: "user2", email: "jane@example.com", name: "Jane" },
       ];
@@ -272,7 +272,7 @@ describe("Batch Operations", () => {
         { id: "user1", name: "John", status: "active" },
         { id: "user2", name: "Jane", status: "active" },
         { id: "user3", name: "Bob", status: "active" },
-      ] as UserType[]);
+      ]);
 
       // Update multiple users
       const result = await User.updateMany([
@@ -309,7 +309,7 @@ describe("Batch Operations", () => {
         primaryKey: [{ name: "users", key: "id" }],
       });
 
-      await User.create({ id: "user1", name: "John" } as UserType);
+      await User.create({ id: "user1", name: "John" });
 
       const result = await User.updateMany([
         { key: "user1", data: { name: "Johnny" } },
@@ -342,7 +342,7 @@ describe("Batch Operations", () => {
         id: "user1",
         name: "John",
         email: "john@example.com",
-      } as UserType);
+      });
 
       // Try to update with invalid email
       await expect(
@@ -365,10 +365,13 @@ describe("Batch Operations", () => {
         primaryKey: [{ name: "users", key: "id" }],
       });
 
-      await User.createMany([
+      const createResult = await User.createMany([
         { id: "user1", name: "John" },
         { id: "user2", name: "Jane" },
-      ] as UserType[]);
+      ]);
+
+      // Verify creation succeeded
+      expect(createResult.stats.created).toBe(2);
 
       const result = await User.updateMany([
         { key: "user1", data: { name: "Johnny" } },
@@ -403,7 +406,7 @@ describe("Batch Operations", () => {
         { id: "user1", name: "John" },
         { id: "user2", name: "Jane" },
         { id: "user3", name: "Bob" },
-      ] as UserType[]);
+      ]);
 
       const result = await User.deleteMany([
         { key: "user1" },
@@ -442,7 +445,7 @@ describe("Batch Operations", () => {
       await User.createMany([
         { id: "user1", name: "John" },
         { id: "user2", name: "Jane" },
-      ] as UserType[]);
+      ]);
 
       const result = await User.deleteMany([
         { key: "user1" },
@@ -478,8 +481,7 @@ describe("Batch Operations", () => {
         relations: [{
           entityName: "comments",
           fields: ["id"],
-          type: "one-to-many",
-          key: [{ name: "comments_by_post", key: "id" }],
+          type: RelationType.ONE_TO_MANY,
           valueType: ValueType.VALUE,
         }],
       });
@@ -493,12 +495,12 @@ describe("Batch Operations", () => {
       await Post.createMany([
         { id: "post1", title: "First Post", userId: "user1" },
         { id: "post2", title: "Second Post", userId: "user1" },
-      ] as PostType[]);
+      ]);
 
       await Comment.createMany([
         { id: "comment1", postId: "post1", content: "Comment 1" },
         { id: "comment2", postId: "post1", content: "Comment 2" },
-      ] as CommentType[]);
+      ]);
 
       // Delete posts with cascade
       await Post.deleteMany([
@@ -526,7 +528,7 @@ describe("Batch Operations", () => {
         primaryKey: [{ name: "users", key: "id" }],
       });
 
-      await User.create({ id: "user1", name: "John" } as UserType);
+      await User.create({ id: "user1", name: "John" });
 
       const result = await User.deleteMany([
         { key: "user1" },
@@ -564,7 +566,7 @@ describe("Batch Operations", () => {
         { id: "user2", name: "Jane", age: 30, status: "active" },
         { id: "user3", name: "Bob", age: 35, status: "active" },
         { id: "user4", name: "Alice", age: 40, status: "active" },
-      ] as UserType[]);
+      ]);
 
       // Find users over 30
       const olderUsers = await User
@@ -614,7 +616,7 @@ describe("Batch Operations", () => {
         { id: "user1", name: "J", email: "john@example.com" }, // Name too short
         { id: "user2", name: "Jane", email: "invalid" }, // Invalid email
         { id: "user3", name: "Bob", email: "bob@example.com" }, // Valid
-      ] as UserType[];
+      ];
 
       const result = await User.createMany(users, {
         continueOnError: true,

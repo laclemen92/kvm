@@ -315,12 +315,14 @@ async function _eagerLoadBelongsTo(
           name: relation.entityName,
           primaryKey: [{ name: relation.entityName, key: "id" }],
         } as KVMEntity;
-        await eagerLoadRelations(
-          relatedEntity,
-          kv,
-          [result],
-          includePath.include,
-        );
+        if (result?.value !== null) {
+          await eagerLoadRelations(
+            relatedEntity,
+            kv,
+            [result as Deno.KvEntry<unknown>],
+            includePath.include,
+          );
+        }
       }
     }
   } catch (error) {
@@ -460,12 +462,15 @@ async function _eagerLoadManyToMany(
         name: relation.entityName,
         primaryKey: [{ name: relation.entityName, key: "id" }],
       } as KVMEntity;
-      await eagerLoadRelations(
-        relatedEntity,
-        kv,
-        relatedRecords,
-        includePath.include,
-      );
+      const validRecords = relatedRecords.filter(r => r?.value !== null) as Deno.KvEntry<unknown>[];
+      if (validRecords.length > 0) {
+        await eagerLoadRelations(
+          relatedEntity,
+          kv,
+          validRecords,
+          includePath.include,
+        );
+      }
     }
   } catch (error) {
     value[relation.entityName] = [];

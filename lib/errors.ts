@@ -122,7 +122,14 @@ export class KVMOperationError extends KVMError {
       | "read"
       | "update"
       | "delete"
-      | "atomic",
+      | "atomic"
+      | "commit"
+      | "populate"
+      | "createAtomic"
+      | "updateAtomic"
+      | "deleteAtomic"
+      | "transferAtomic"
+      | "upsertAtomic",
     message: string,
     public readonly modelName?: string,
     public readonly originalError?: Error,
@@ -332,7 +339,7 @@ export class KVMErrorUtils {
    */
   static wrap(
     error: Error,
-    operation: "create" | "read" | "update" | "delete" | "atomic",
+    operation: "create" | "read" | "update" | "delete" | "atomic" | "populate",
     modelName?: string,
   ): KVMOperationError {
     if (KVMErrorUtils.isKVMError(error)) {
@@ -375,7 +382,7 @@ export class KVMErrorUtils {
     }
 
     // Handle common non-KVM errors
-    if (error.name === "ZodError") {
+    if ((error as any).name === "ZodError") {
       return "Invalid data provided";
     }
 

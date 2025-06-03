@@ -10,7 +10,7 @@ import type { z } from "zod";
 import { create } from "./create.ts";
 import { commentEntity, postEntity, productEntity } from "./fixtures.ts";
 import type { KVMEntity } from "./types.ts";
-import { ValueType } from "./types.ts";
+import { RelationType, ValueType } from "./types.ts";
 
 describe("create", () => {
   let kv: Deno.Kv;
@@ -82,15 +82,14 @@ describe("create", () => {
     } as unknown as Deno.Kv;
 
     type Post = z.infer<typeof postEntity.schema>;
-    const result = await create<Post>(postEntity, mockKv, {
+    
+    await expect(create<Post>(postEntity, mockKv, {
       id: "post1",
       slug: "/hello-world",
       title: "Hello World",
       content: "Test content",
       userId: "user1",
-    });
-
-    expect(result).toBeNull();
+    })).rejects.toThrow("Failed to create posts: key already exists");
   });
 
   it("should create entity with secondary index using ValueType.KEY", async () => {
@@ -164,7 +163,7 @@ describe("create", () => {
       relations: [{
         entityName: "categories",
         fields: ["categoryId"],
-        type: "one-to-many",
+        type: RelationType.ONE_TO_MANY,
         valueType: ValueType.KEY,
         valueKey: "id",
       }],
@@ -197,7 +196,7 @@ describe("create", () => {
     expect(relationKey.value).toBe("product1"); // Should store just the ID
   });
 
-  it("should handle console error in catch block", async () => {
+  it("should throw error for invalid primary key structure", async () => {
     // Spy on console.error
     const originalError = console.error;
     const errors: unknown[] = [];
@@ -213,19 +212,16 @@ describe("create", () => {
     };
 
     type Post = z.infer<typeof postEntity.schema>;
-    const result = await create<Post>(invalidEntity, kv, {
+    
+    // Expect the create function to throw an error
+    await expect(create<Post>(invalidEntity, kv, {
       id: "post1",
       slug: "/test",
       title: "Test",
       content: "Test",
       userId: "user1",
-    });
-
-    expect(result).toBeNull();
-    expect(errors.length).toBe(1);
-    expect(errors[0]).toBeInstanceOf(Error);
-    expect((errors[0] as Error).message).toContain(
-      "expected string, number, bigint, ArrayBufferView, boolean",
+    })).rejects.toThrow(
+      "expected string, number, bigint, ArrayBufferView, boolean"
     );
 
     // Restore console.error

@@ -210,7 +210,7 @@ export interface ValidationPluginOptions {
  * Hook execution error with additional context
  */
 export class HookExecutionError extends Error {
-  readonly name = "HookExecutionError";
+  override readonly name = "HookExecutionError";
 
   constructor(
     public readonly hookId: string,
@@ -229,7 +229,7 @@ export class HookExecutionError extends Error {
  * Hook timeout error
  */
 export class HookTimeoutError extends Error {
-  readonly name = "HookTimeoutError";
+  override readonly name = "HookTimeoutError";
 
   constructor(
     public readonly hookId: string,

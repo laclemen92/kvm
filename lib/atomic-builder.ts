@@ -21,7 +21,7 @@ import {
 import { buildPrimaryKey } from "./utils.ts";
 import { findUnique } from "./find.ts";
 import { ValueType } from "./types.ts";
-import { KVMError, KVMErrorUtils, KVMValidationError } from "./errors.ts";
+import { KVMErrorUtils, KVMOperationError, KVMValidationError } from "./errors.ts";
 
 /**
  * Default atomic transaction options
@@ -195,7 +195,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         failedMutation: {
           index: -1,
           mutation: {} as AtomicMutation,
-          error: new KVMError("No mutations to commit"),
+          error: new KVMOperationError("commit", "No mutations to commit"),
         },
       };
     }
@@ -207,7 +207,8 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         failedMutation: {
           index: -1,
           mutation: {} as AtomicMutation,
-          error: new KVMError(
+          error: new KVMOperationError(
+            "commit",
             `Too many mutations: ${this.mutations.length}. Maximum allowed: ${opts.maxMutations}`,
           ),
         },
@@ -257,7 +258,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
       failedMutation: {
         index: -1,
         mutation: {} as AtomicMutation,
-        error: lastError || new KVMError("Unknown atomic transaction error"),
+        error: lastError || new KVMOperationError("commit", "Unknown atomic transaction error"),
       },
     };
   }
@@ -308,7 +309,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         throw new KVMValidationError(
           "mutation",
           mutation,
-          `Mutation ${i} validation failed: ${error.message}`,
+          `Mutation ${i} validation failed: ${(error as Error).message}`,
           mutation.modelName,
         );
       }
@@ -351,7 +352,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     }
 
     // Check if record exists
-    const existing = await findUnique(mutation.entity, this.kv, mutation.key);
+    const existing = await findUnique(mutation.entity, this.kv, mutation.key as any);
     if (!existing || !existing.value) {
       throw new Error(
         `Record not found with key: ${JSON.stringify(mutation.key)}`,
@@ -381,7 +382,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     }
 
     // Check if record exists
-    const existing = await findUnique(mutation.entity, this.kv, mutation.key);
+    const existing = await findUnique(mutation.entity, this.kv, mutation.key as any);
     if (!existing || !existing.value) {
       throw new Error(
         `Record not found with key: ${JSON.stringify(mutation.key)}`,
@@ -442,7 +443,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
       ? this.timeoutPromise(options.timeout)
       : null;
 
-    let result: Deno.KvCommitResult;
+    let result: Deno.KvCommitResult | Deno.KvCommitError;
     if (timeoutPromise) {
       result = await Promise.race([commitPromise, timeoutPromise]);
     } else {
@@ -451,7 +452,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
 
     return {
       ok: result.ok,
-      versionstamp: result.versionstamp || undefined,
+      versionstamp: 'versionstamp' in result ? result.versionstamp : undefined,
       mutations: this.mutations,
     };
   }
@@ -491,7 +492,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     if (entity.relations) {
       for (const relation of entity.relations) {
         const relationKey = buildPrimaryKey(
-          relation.key || entity.primaryKey,
+          entity.primaryKey, // Relations use the entity's primary key
           data,
         );
 
@@ -515,7 +516,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const { entity, key, data, options } = mutation;
 
     // Get existing record for merging and secondary index cleanup
-    const existing = await findUnique(entity, this.kv, key);
+    const existing = await findUnique(entity, this.kv, key as any);
     if (!existing || !existing.value) {
       throw new Error(`Record not found for update: ${JSON.stringify(key)}`);
     }
@@ -561,7 +562,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const { entity, key, options } = mutation;
 
     // Get existing record for secondary index cleanup
-    const existing = await findUnique(entity, this.kv, key);
+    const existing = await findUnique(entity, this.kv, key as any);
     if (!existing || !existing.value) {
       throw new Error(`Record not found for delete: ${JSON.stringify(key)}`);
     }
@@ -584,7 +585,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     if (options?.cascadeDelete && entity.relations) {
       for (const relation of entity.relations) {
         const relationKey = buildPrimaryKey(
-          relation.key || entity.primaryKey,
+          entity.primaryKey, // Relations use the entity's primary key
           existing.value,
         );
         atomic.delete(relationKey);
