@@ -14,6 +14,12 @@ import { findUnique, findUniqueOrThrow, findMany, findFirst, findFirstOrThrow } 
 import { update, updateMany } from "./update.ts";
 import { deleteKey, deleteMany } from "./delete.ts";
 import { KVMQueryBuilder } from "./query-builder.ts";
+import { 
+  KVMNotFoundError, 
+  KVMOperationError, 
+  KVMValidationError,
+  KVMErrorUtils 
+} from "./errors.ts";
 
 /**
  * Base model class that provides instance methods for documents
@@ -32,18 +38,25 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
     
-    const result = await update<T>(
-      ModelClass.entity,
-      ModelClass.kv,
-      primaryKeyValue,
-      this as any
-    );
-    
-    if (result?.value) {
-      Object.assign(this, result.value);
+    try {
+      const result = await update<T>(
+        ModelClass.entity,
+        ModelClass.kv,
+        primaryKeyValue,
+        this as any
+      );
+      
+      if (result?.value) {
+        Object.assign(this, result.value);
+      }
+      
+      return this;
+    } catch (error) {
+      if (error.name === 'ZodError') {
+        throw KVMErrorUtils.fromZodError(error, ModelClass.modelName);
+      }
+      throw KVMErrorUtils.wrap(error as Error, 'update', ModelClass.modelName);
     }
-    
-    return this;
   }
 
   /**
@@ -53,20 +66,32 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
     
-    await deleteKey<T>(
-      ModelClass.entity,
-      ModelClass.kv,
-      primaryKeyValue,
-      options ? { cascadeDelete: options.cascadeDelete ?? false } : undefined
-    );
+    try {
+      await deleteKey<T>(
+        ModelClass.entity,
+        ModelClass.kv,
+        primaryKeyValue,
+        options ? { cascadeDelete: options.cascadeDelete ?? false } : undefined
+      );
+    } catch (error) {
+      throw KVMErrorUtils.wrap(error as Error, 'delete', ModelClass.modelName);
+    }
   }
 
   /**
    * Update this document with new data
    */
   async update(data: Partial<T>, options?: UpdateOptions): Promise<this> {
-    Object.assign(this, data);
-    return this.save();
+    try {
+      Object.assign(this, data);
+      return await this.save();
+    } catch (error) {
+      if (KVMErrorUtils.isKVMError(error)) {
+        throw error;
+      }
+      const ModelClass = this.constructor as ModelConstructor<T>;
+      throw KVMErrorUtils.wrap(error as Error, 'update', ModelClass.modelName);
+    }
   }
 
   /**
@@ -76,17 +101,30 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
     
-    const result = await findUnique<T>(
-      ModelClass.entity,
-      ModelClass.kv,
-      primaryKeyValue
-    );
-    
-    if (result?.value) {
-      Object.assign(this, result.value);
+    try {
+      const result = await findUnique<T>(
+        ModelClass.entity,
+        ModelClass.kv,
+        primaryKeyValue
+      );
+      
+      if (result?.value) {
+        Object.assign(this, result.value);
+      } else {
+        throw new KVMNotFoundError(
+          ModelClass.modelName,
+          primaryKeyValue,
+          'id'
+        );
+      }
+      
+      return this;
+    } catch (error) {
+      if (KVMErrorUtils.isKVMError(error)) {
+        throw error;
+      }
+      throw KVMErrorUtils.wrap(error as Error, 'read', ModelClass.modelName);
     }
-    
-    return this;
   }
 
   /**
@@ -123,13 +161,23 @@ export function createModelClass<T = any>(
      * Create a new document
      */
     static async create(data: T, options?: CreateOptions): Promise<DynamicModel & T> {
-      const result = await create<T>(this.entity, this.kv, data, options);
-      
-      if (!result?.value) {
-        throw new Error(`Failed to create ${modelName}`);
+      try {
+        const result = await create<T>(this.entity, this.kv, data, options);
+        
+        if (!result?.value) {
+          throw new KVMOperationError('create', 'Failed to create document', modelName);
+        }
+        
+        return new this(result.value) as DynamicModel & T;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        if (error.name === 'ZodError') {
+          throw KVMErrorUtils.fromZodError(error, modelName);
+        }
+        throw KVMErrorUtils.wrap(error as Error, 'create', modelName);
       }
-      
-      return new this(result.value) as DynamicModel & T;
     }
 
     /**
@@ -139,13 +187,20 @@ export function createModelClass<T = any>(
       id: string,
       options?: FindOptions
     ): Promise<(DynamicModel & T) | null> {
-      const result = await findUnique<T>(this.entity, this.kv, id);
-      
-      if (!result?.value) {
-        return null;
+      try {
+        const result = await findUnique<T>(this.entity, this.kv, id);
+        
+        if (!result?.value) {
+          return null;
+        }
+        
+        return new this(result.value) as DynamicModel & T;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, 'read', modelName);
       }
-      
-      return new this(result.value) as DynamicModel & T;
     }
 
     /**
@@ -158,7 +213,7 @@ export function createModelClass<T = any>(
       const result = await this.findById(id, options);
       
       if (!result) {
-        throw new Error(`${modelName} with id '${id}' not found`);
+        throw new KVMNotFoundError(modelName, id, 'id');
       }
       
       return result;
@@ -172,19 +227,26 @@ export function createModelClass<T = any>(
       secondaryIndexName?: string,
       includeValue?: boolean
     ): Promise<(DynamicModel & T) | null> {
-      const result = await findUnique<T>(
-        this.entity,
-        this.kv,
-        key as any,
-        secondaryIndexName,
-        includeValue
-      );
-      
-      if (!result?.value) {
-        return null;
+      try {
+        const result = await findUnique<T>(
+          this.entity,
+          this.kv,
+          key as any,
+          secondaryIndexName,
+          includeValue
+        );
+        
+        if (!result?.value) {
+          return null;
+        }
+        
+        return new this(result.value) as DynamicModel & T;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, 'read', modelName);
       }
-      
-      return new this(result.value) as DynamicModel & T;
     }
 
     /**
@@ -195,15 +257,17 @@ export function createModelClass<T = any>(
       secondaryIndexName?: string,
       includeValue?: boolean
     ): Promise<DynamicModel & T> {
-      const result = await findUniqueOrThrow<T>(
-        this.entity,
-        this.kv,
-        key as any,
-        secondaryIndexName,
-        includeValue
-      );
+      const result = await this.findUnique(key, secondaryIndexName, includeValue);
       
-      return new this(result.value!) as DynamicModel & T;
+      if (!result) {
+        throw new KVMNotFoundError(
+          modelName,
+          key,
+          secondaryIndexName ? 'unique' : 'id'
+        );
+      }
+      
+      return result;
     }
 
     /**
@@ -212,9 +276,16 @@ export function createModelClass<T = any>(
     static async findMany(
       options?: FindManyOptions
     ): Promise<(DynamicModel & T)[]> {
-      const results = await findMany<T>(this.entity, this.kv, options);
-      
-      return results.map(result => new this(result.value) as DynamicModel & T);
+      try {
+        const results = await findMany<T>(this.entity, this.kv, options);
+        
+        return results.map(result => new this(result.value) as DynamicModel & T);
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, 'read', modelName);
+      }
     }
 
     /**
@@ -223,13 +294,20 @@ export function createModelClass<T = any>(
     static async findFirst(
       options?: FindManyOptions
     ): Promise<(DynamicModel & T) | null> {
-      const result = await findFirst<T>(this.entity, this.kv, options);
-      
-      if (!result?.value) {
-        return null;
+      try {
+        const result = await findFirst<T>(this.entity, this.kv, options);
+        
+        if (!result?.value) {
+          return null;
+        }
+        
+        return new this(result.value) as DynamicModel & T;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, 'read', modelName);
       }
-      
-      return new this(result.value) as DynamicModel & T;
     }
 
     /**
@@ -238,9 +316,13 @@ export function createModelClass<T = any>(
     static async findFirstOrThrow(
       options?: FindManyOptions
     ): Promise<DynamicModel & T> {
-      const result = await findFirstOrThrow<T>(this.entity, this.kv, options);
+      const result = await this.findFirst(options);
       
-      return new this(result.value!) as DynamicModel & T;
+      if (!result) {
+        throw new KVMNotFoundError(modelName, {}, 'first');
+      }
+      
+      return result;
     }
 
     /**

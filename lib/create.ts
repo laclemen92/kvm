@@ -26,7 +26,7 @@ export const create = async <T = unknown>(
   // should it matter if it is an update or create? yea it does cause if it is an update, we can spread
 
   // first check that the schema and value are good to go
-  // const result = entity.schema.parse(value);
+  entity.schema.parse(value);
   const pk: Deno.KvKey = buildPrimaryKey(entity.primaryKey, value);
   const operation = kv.atomic();
   const checks = [];

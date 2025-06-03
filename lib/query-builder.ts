@@ -11,6 +11,7 @@ import type {
 import type { ModelDocument, ModelConstructor } from "./model-types.ts";
 import type { KVMEntity, FindManyOptions } from "./types.ts";
 import { findMany } from "./find.ts";
+import { KVMNotFoundError, KVMQueryError, KVMErrorUtils } from "./errors.ts";
 
 /**
  * WhereClause implementation for building field-specific conditions
@@ -175,11 +176,17 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    * Pagination methods
    */
   limit(count: number): QueryBuilder<T> {
+    if (count < 0) {
+      throw new KVMQueryError('Limit must be non-negative', { limit: count });
+    }
     this.config.limit = count;
     return this;
   }
 
   offset(count: number): QueryBuilder<T> {
+    if (count < 0) {
+      throw new KVMQueryError('Offset must be non-negative', { offset: count });
+    }
     this.config.offset = count;
     return this;
   }
@@ -229,7 +236,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   async findOneOrThrow(): Promise<ModelDocument<T> & T> {
     const result = await this.findOne();
     if (!result) {
-      throw new Error(`${this.entity.name} not found`);
+      throw new KVMNotFoundError(this.entity.name, this.config, 'query');
     }
     return result;
   }
@@ -269,70 +276,97 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    * Execute the query against Deno KV
    */
   private async executeQuery() {
-    // For complex queries with where conditions or sorting, we need to fetch all data first
-    // and then apply filtering/sorting client-side
-    const needsClientSideProcessing = this.config.where.length > 0 || this.config.sort.length > 0;
-    
-    // Convert QueryBuilder config to FindManyOptions
-    const options: FindManyOptions = {};
-    
-    // Only apply KV-level optimizations if we don't need client-side processing
-    if (!needsClientSideProcessing) {
-      if (this.config.limit) {
-        options.limit = this.config.limit;
-      }
+    try {
+      // For complex queries with where conditions or sorting, we need to fetch all data first
+      // and then apply filtering/sorting client-side
+      const needsClientSideProcessing = this.config.where.length > 0 || this.config.sort.length > 0;
       
-      if (this.config.cursor) {
-        options.cursor = this.config.cursor;
-      }
+      // Convert QueryBuilder config to FindManyOptions
+      const options: FindManyOptions = {};
       
-      if (this.config.reverse) {
-        options.reverse = this.config.reverse;
-      }
-    }
-
-    // Get entries
-    let results = await findMany<T>(this.entity, this.kv, options);
-
-    // Apply where conditions (client-side filtering)
-    if (this.config.where.length > 0) {
-      results = results.filter(entry => {
-        return this.config.where.every(condition => {
-          return this.evaluateCondition(entry.value, condition);
-        });
-      });
-    }
-
-    // Apply sorting (client-side)
-    if (this.config.sort.length > 0) {
-      results.sort((a, b) => {
-        for (const sortConfig of this.config.sort) {
-          const aValue = (a.value as any)[sortConfig.field];
-          const bValue = (b.value as any)[sortConfig.field];
-          
-          let comparison = 0;
-          if (aValue < bValue) comparison = -1;
-          else if (aValue > bValue) comparison = 1;
-          
-          if (comparison !== 0) {
-            return sortConfig.direction === "desc" ? -comparison : comparison;
-          }
+      // Only apply KV-level optimizations if we don't need client-side processing
+      if (!needsClientSideProcessing) {
+        if (this.config.limit) {
+          options.limit = this.config.limit;
         }
-        return 0;
-      });
-    }
+        
+        if (this.config.cursor) {
+          options.cursor = this.config.cursor;
+        }
+        
+        if (this.config.reverse) {
+          options.reverse = this.config.reverse;
+        }
+      }
 
-    // Apply offset
-    if (this.config.offset) {
-      results = results.slice(this.config.offset);
-    }
+      // Get entries
+      let results = await findMany<T>(this.entity, this.kv, options);
 
-    // Apply limit (after offset and filtering)
-    if (this.config.limit) {
-      results = results.slice(0, this.config.limit);
-    }
+      // Apply where conditions (client-side filtering)
+      if (this.config.where.length > 0) {
+        results = results.filter(entry => {
+          return this.config.where.every(condition => {
+            try {
+              return this.evaluateCondition(entry.value, condition);
+            } catch (error) {
+              throw new KVMQueryError(
+                `Failed to evaluate condition on field '${condition.field}' with operator '${condition.operator}'`,
+                { condition, value: entry.value }
+              );
+            }
+          });
+        });
+      }
 
-    return results;
+      // Apply sorting (client-side)
+      if (this.config.sort.length > 0) {
+        try {
+          results.sort((a, b) => {
+            for (const sortConfig of this.config.sort) {
+              const aValue = (a.value as any)[sortConfig.field];
+              const bValue = (b.value as any)[sortConfig.field];
+              
+              let comparison = 0;
+              if (aValue < bValue) comparison = -1;
+              else if (aValue > bValue) comparison = 1;
+              
+              if (comparison !== 0) {
+                return sortConfig.direction === "desc" ? -comparison : comparison;
+              }
+            }
+            return 0;
+          });
+        } catch (error) {
+          throw new KVMQueryError(
+            `Failed to sort results`,
+            { sortConfig: this.config.sort }
+          );
+        }
+      }
+
+      // Apply offset
+      if (this.config.offset && this.config.offset < 0) {
+        throw new KVMQueryError('Offset cannot be negative', { offset: this.config.offset });
+      }
+      if (this.config.offset) {
+        results = results.slice(this.config.offset);
+      }
+
+      // Apply limit (after offset and filtering)
+      if (this.config.limit && this.config.limit < 0) {
+        throw new KVMQueryError('Limit cannot be negative', { limit: this.config.limit });
+      }
+      if (this.config.limit) {
+        results = results.slice(0, this.config.limit);
+      }
+
+      return results;
+    } catch (error) {
+      if (KVMErrorUtils.isKVMError(error)) {
+        throw error;
+      }
+      throw KVMErrorUtils.wrap(error as Error, 'read', this.entity.name);
+    }
   }
 
   /**

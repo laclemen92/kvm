@@ -43,6 +43,9 @@ export const update = async <T = unknown>(
     };
   }
 
+  // Validate the final value against the schema
+  entity.schema.parse(valueToUpdate);
+
   const operation = kv.atomic();
   operation.set(pk, valueToUpdate, options);
 

@@ -67,6 +67,15 @@
  *   .orderBy('createdAt', 'desc')
  *   .limit(10)
  *   .find();
+ *
+ * // Enhanced Error Handling
+ * try {
+ *   await User.create(invalidData);
+ * } catch (error) {
+ *   if (KVMErrorUtils.isValidationError(error)) {
+ *     console.log(`Validation failed: ${error.field} - ${error.rule}`);
+ *   }
+ * }
  * ```
  */
 
@@ -105,6 +114,20 @@ export type {
   QueryBuilderFactory,
 } from "./lib/query-types.ts";
 export { KVMQueryBuilder } from "./lib/query-builder.ts";
+
+// Error Handling
+export {
+  KVMError,
+  KVMValidationError,
+  KVMNotFoundError,
+  KVMConstraintError,
+  KVMOperationError,
+  KVMConfigurationError,
+  KVMConnectionError,
+  KVMConcurrencyError,
+  KVMQueryError,
+  KVMErrorUtils,
+} from "./lib/errors.ts";
 
 // Re-export Zod types for convenience
 export type { ZodObject, ZodRawShape } from "zod";

@@ -135,6 +135,6 @@ describe("Model-Based API - Basic Tests", () => {
 
     // Test findByIdOrThrow
     await expect(User.findByIdOrThrow("nonexistent"))
-      .rejects.toThrow("users with id 'nonexistent' not found");
+      .rejects.toThrow("users not found by id: nonexistent");
   });
 });
