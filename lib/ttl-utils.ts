@@ -1,7 +1,7 @@
 /**
  * TTL (Time To Live) utility functions for KVM
- * 
- * These utilities help with common TTL patterns and provide 
+ *
+ * These utilities help with common TTL patterns and provide
  * convenient ways to work with expiration times.
  */
 
@@ -49,7 +49,17 @@ export const TTL = {
   /**
    * Calculate TTL for a number of time units from now
    */
-  fromNow(amount: number, unit: 'seconds' | 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years'): number {
+  fromNow(
+    amount: number,
+    unit:
+      | "seconds"
+      | "minutes"
+      | "hours"
+      | "days"
+      | "weeks"
+      | "months"
+      | "years",
+  ): number {
     const multipliers = {
       seconds: TTL.SECOND,
       minutes: TTL.MINUTE,
@@ -59,7 +69,7 @@ export const TTL = {
       months: TTL.MONTH,
       years: TTL.YEAR,
     };
-    
+
     return amount * multipliers[unit];
   },
 
@@ -74,7 +84,7 @@ export const TTL = {
    * Check if a TTL value is valid (positive number)
    */
   isValid(ttlMs: number): boolean {
-    return typeof ttlMs === 'number' && ttlMs > 0 && Number.isFinite(ttlMs);
+    return typeof ttlMs === "number" && ttlMs > 0 && Number.isFinite(ttlMs);
   },
 
   /**
@@ -84,7 +94,9 @@ export const TTL = {
   parse(ttlString: string): number {
     const match = ttlString.match(/^(\d+)([smhdwy])$/i);
     if (!match) {
-      throw new Error(`Invalid TTL format: ${ttlString}. Use format like "5m", "1h", "30s", "2d"`);
+      throw new Error(
+        `Invalid TTL format: ${ttlString}. Use format like "5m", "1h", "30s", "2d"`,
+      );
     }
 
     const [, amountStr, unit] = match;
@@ -148,13 +160,13 @@ export const TTLConfig = {
    */
   TOKEN: {
     /** Email verification tokens */
-    EMAIL_VERIFICATION: TTL.fromNow(24, 'hours'),
+    EMAIL_VERIFICATION: TTL.fromNow(24, "hours"),
     /** Password reset tokens */
-    PASSWORD_RESET: TTL.fromNow(1, 'hours'),
+    PASSWORD_RESET: TTL.fromNow(1, "hours"),
     /** OTP codes */
-    OTP: TTL.fromNow(5, 'minutes'),
+    OTP: TTL.fromNow(5, "minutes"),
     /** API rate limiting tokens */
-    RATE_LIMIT: TTL.fromNow(1, 'hours'),
+    RATE_LIMIT: TTL.fromNow(1, "hours"),
   },
 
   /**
@@ -162,13 +174,13 @@ export const TTLConfig = {
    */
   CACHE: {
     /** Quick cache for frequently accessed data */
-    QUICK: TTL.fromNow(5, 'minutes'),
+    QUICK: TTL.fromNow(5, "minutes"),
     /** Standard cache duration */
-    STANDARD: TTL.fromNow(1, 'hours'),
+    STANDARD: TTL.fromNow(1, "hours"),
     /** Long-term cache for stable data */
-    LONG_TERM: TTL.fromNow(1, 'days'),
+    LONG_TERM: TTL.fromNow(1, "days"),
     /** Static content cache */
-    STATIC: TTL.fromNow(7, 'days'),
+    STATIC: TTL.fromNow(7, "days"),
   },
 
   /**
@@ -176,22 +188,25 @@ export const TTLConfig = {
    */
   TEMPORARY: {
     /** Very short-lived data */
-    EPHEMERAL: TTL.fromNow(1, 'minutes'),
+    EPHEMERAL: TTL.fromNow(1, "minutes"),
     /** Form data preservation */
-    FORM_DATA: TTL.fromNow(30, 'minutes'),
+    FORM_DATA: TTL.fromNow(30, "minutes"),
     /** File upload tokens */
-    UPLOAD_TOKEN: TTL.fromNow(2, 'hours'),
+    UPLOAD_TOKEN: TTL.fromNow(2, "hours"),
     /** Preview/draft content */
-    DRAFT: TTL.fromNow(7, 'days'),
+    DRAFT: TTL.fromNow(7, "days"),
   },
 } as const;
 
 /**
  * Helper function to create TTL-aware options
  */
-export function withTTL(ttl: number | string, baseOptions: Record<string, any> = {}): { expireIn: number } & typeof baseOptions {
-  const expireIn = typeof ttl === 'string' ? TTL.parse(ttl) : ttl;
-  
+export function withTTL(
+  ttl: number | string,
+  baseOptions: Record<string, any> = {},
+): { expireIn: number } & typeof baseOptions {
+  const expireIn = typeof ttl === "string" ? TTL.parse(ttl) : ttl;
+
   if (!TTL.isValid(expireIn)) {
     throw new Error(`Invalid TTL value: ${ttl}`);
   }
@@ -205,27 +220,39 @@ export function withTTL(ttl: number | string, baseOptions: Record<string, any> =
 /**
  * Helper function to create session-specific TTL options
  */
-export function sessionTTL(type: keyof typeof TTLConfig.SESSION = 'STANDARD', baseOptions: Record<string, any> = {}) {
+export function sessionTTL(
+  type: keyof typeof TTLConfig.SESSION = "STANDARD",
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.SESSION[type], baseOptions);
 }
 
 /**
  * Helper function to create cache-specific TTL options
  */
-export function cacheTTL(type: keyof typeof TTLConfig.CACHE = 'STANDARD', baseOptions: Record<string, any> = {}) {
+export function cacheTTL(
+  type: keyof typeof TTLConfig.CACHE = "STANDARD",
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.CACHE[type], baseOptions);
 }
 
 /**
  * Helper function to create token-specific TTL options
  */
-export function tokenTTL(type: keyof typeof TTLConfig.TOKEN, baseOptions: Record<string, any> = {}) {
+export function tokenTTL(
+  type: keyof typeof TTLConfig.TOKEN,
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.TOKEN[type], baseOptions);
 }
 
 /**
  * Helper function to create temporary data TTL options
  */
-export function temporaryTTL(type: keyof typeof TTLConfig.TEMPORARY = 'FORM_DATA', baseOptions: Record<string, any> = {}) {
+export function temporaryTTL(
+  type: keyof typeof TTLConfig.TEMPORARY = "FORM_DATA",
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.TEMPORARY[type], baseOptions);
 }

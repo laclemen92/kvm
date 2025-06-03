@@ -7,11 +7,7 @@ import type {
   ModelStatic,
   UpdateOptions,
 } from "./model-types.ts";
-import type {
-  FindManyOptions,
-  KVMEntity,
-  PopulateOptions,
-} from "./types.ts";
+import type { FindManyOptions, KVMEntity, PopulateOptions } from "./types.ts";
 import { RelationType } from "./types.ts";
 import type { QueryBuilder, WhereClause } from "./query-types.ts";
 import type {
@@ -57,6 +53,8 @@ import {
   KVMOperationError,
   KVMValidationError,
 } from "./errors.ts";
+import type { AtomicMutationBuilder } from "./atomic-types.ts";
+import { createAtomicBuilder } from "./atomic-builder.ts";
 
 /**
  * Base model class that provides instance methods for documents
@@ -894,6 +892,194 @@ export function createModelClass<T = any>(
     ): void {
       this.hooks.post(type, fn, options);
     }
+
+    // ============================================================================
+    // Atomic Transaction Methods
+    // ============================================================================
+
+    /**
+     * Create an atomic transaction builder
+     */
+    static atomic(): AtomicMutationBuilder {
+      return createAtomicBuilder(this.kv);
+    }
+
+    /**
+     * Create multiple documents atomically
+     */
+    static async createAtomic(
+      data: T[],
+      options?: CreateOptions,
+    ): Promise<(DynamicModel & T)[]> {
+      const builder = this.atomic();
+
+      for (const item of data) {
+        builder.create(this.entity, item, options);
+      }
+
+      const result = await builder.commit();
+
+      if (!result.ok) {
+        throw new KVMOperationError(
+          "createAtomic",
+          result.failedMutation?.error.message || "Atomic create failed",
+          modelName,
+        );
+      }
+
+      return data.map((item) => new this(item) as DynamicModel & T);
+    }
+
+    /**
+     * Update multiple documents atomically
+     */
+    static async updateAtomic(
+      updates: Array<{
+        key: Record<string, Deno.KvKeyPart>;
+        data: Partial<T>;
+        options?: UpdateOptions;
+      }>,
+    ): Promise<(DynamicModel & T)[]> {
+      const builder = this.atomic();
+
+      for (const update of updates) {
+        builder.update(this.entity, update.key, update.data, update.options);
+      }
+
+      const result = await builder.commit();
+
+      if (!result.ok) {
+        throw new KVMOperationError(
+          "updateAtomic",
+          result.failedMutation?.error.message || "Atomic update failed",
+          modelName,
+        );
+      }
+
+      // Fetch updated records to return
+      const updatedRecords = [];
+      for (const update of updates) {
+        const record = await this.findUnique(update.key);
+        if (record) {
+          updatedRecords.push(record);
+        }
+      }
+
+      return updatedRecords;
+    }
+
+    /**
+     * Delete multiple documents atomically
+     */
+    static async deleteAtomic(
+      keys: Array<Record<string, Deno.KvKeyPart>>,
+      options?: DeleteOptions,
+    ): Promise<number> {
+      const builder = this.atomic();
+
+      for (const key of keys) {
+        builder.delete(this.entity, key, options);
+      }
+
+      const result = await builder.commit();
+
+      if (!result.ok) {
+        throw new KVMOperationError(
+          "deleteAtomic",
+          result.failedMutation?.error.message || "Atomic delete failed",
+          modelName,
+        );
+      }
+
+      return keys.length;
+    }
+
+    /**
+     * Create an atomic transfer operation (move data from one record to another)
+     */
+    static async transferAtomic(
+      fromKey: Record<string, Deno.KvKeyPart>,
+      toData: T,
+      options?: {
+        expireIn?: number;
+        cascadeDelete?: boolean;
+      },
+    ): Promise<DynamicModel & T> {
+      const result = await this.atomic()
+        .delete(this.entity, fromKey, { cascadeDelete: options?.cascadeDelete })
+        .create(this.entity, toData, { expireIn: options?.expireIn })
+        .commit();
+
+      if (!result.ok) {
+        throw new KVMOperationError(
+          "transferAtomic",
+          result.failedMutation?.error.message || "Atomic transfer failed",
+          modelName,
+        );
+      }
+
+      return new this(toData) as DynamicModel & T;
+    }
+
+    /**
+     * Create an atomic upsert operation (create if not exists, update if exists)
+     */
+    static async upsertAtomic(
+      data: T,
+      options?: {
+        expireIn?: number;
+        merge?: boolean;
+      },
+    ): Promise<DynamicModel & T> {
+      // For upsert, we'll use the builder's set method directly
+      const pk = this._buildPrimaryKey(data);
+
+      const result = await this.atomic()
+        .set(pk, data, { expireIn: options?.expireIn })
+        .commit();
+
+      if (!result.ok) {
+        throw new KVMOperationError(
+          "upsertAtomic",
+          result.failedMutation?.error.message || "Atomic upsert failed",
+          modelName,
+        );
+      }
+
+      return new this(data) as DynamicModel & T;
+    }
+
+    /**
+     * Helper method to build primary key from data
+     */
+    private static _buildPrimaryKey(data: any): Deno.KvKey {
+      const keyParts: Deno.KvKeyPart[] = [];
+
+      for (const keyDef of this.entity.primaryKey) {
+        if (keyDef.name) {
+          keyParts.push(keyDef.name);
+        }
+        if (keyDef.key) {
+          const value = data[keyDef.key];
+          if (value !== undefined && value !== null) {
+            keyParts.push(value);
+          } else {
+            throw new KVMValidationError(
+              keyDef.key,
+              value,
+              `Primary key field '${keyDef.key}' is required`,
+              modelName,
+            );
+          }
+        }
+      }
+
+      return keyParts;
+    }
+
+    // ============================================================================
+    // Hook Management
+    // ============================================================================
 
     /**
      * Install a plugin

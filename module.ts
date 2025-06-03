@@ -117,14 +117,45 @@ export { KVMQueryBuilder } from "./lib/query-builder.ts";
 
 // TTL Utilities
 export {
+  cacheTTL,
+  sessionTTL,
+  temporaryTTL,
+  tokenTTL,
   TTL,
   TTLConfig,
   withTTL,
-  sessionTTL,
-  cacheTTL,
-  tokenTTL,
-  temporaryTTL,
 } from "./lib/ttl-utils.ts";
+
+// Atomic Transactions
+export type {
+  AtomicBatchResult,
+  AtomicCheckMutation,
+  AtomicCreateMutation,
+  AtomicDeleteMutation,
+  AtomicMaxMutation,
+  AtomicMinMutation,
+  AtomicMutation,
+  AtomicMutationBuilder,
+  AtomicMutationType,
+  AtomicSetMutation,
+  AtomicSumMutation,
+  AtomicTransactionOptions,
+  AtomicTransactionResult,
+  AtomicUpdateMutation,
+} from "./lib/atomic-types.ts";
+export { createAtomicBuilder, KVMAtomicBuilder } from "./lib/atomic-builder.ts";
+export {
+  AtomicUtils,
+  createBulkTransaction,
+  createConditionalTransaction,
+  createCopyTransaction,
+  createCounterTransaction,
+  createSwapTransaction,
+  createTransferTransaction,
+  createUpsertTransaction,
+  executeAtomicBatch,
+  retryAtomicTransaction,
+} from "./lib/atomic-utils.ts";
 
 // Error Handling
 export {

@@ -6,6 +6,8 @@ import type {
 } from "./model-types.ts";
 import type { KVMEntity } from "./types.ts";
 import { createModelClass } from "./model.ts";
+import type { AtomicMutationBuilder } from "./atomic-types.ts";
+import { createAtomicBuilder } from "./atomic-builder.ts";
 
 /**
  * Main KVM class for managing models and database connection
@@ -93,6 +95,13 @@ export class KVM {
    */
   getKv(): Deno.Kv {
     return this.kv;
+  }
+
+  /**
+   * Create an atomic transaction builder
+   */
+  atomic(): AtomicMutationBuilder {
+    return createAtomicBuilder(this.kv);
   }
 
   /**

@@ -572,6 +572,112 @@ export const enhancedAuthorEntity: KVMEntity<typeof authorSchema.shape> = {
 };
 
 // ============================================================================
+// Atomic Transaction Examples
+// ============================================================================
+
+// Order entity for demonstrating atomic transactions
+const orderSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  items: z.array(z.object({
+    productId: z.string(),
+    quantity: z.number(),
+    price: z.number(),
+  })),
+  total: z.number(),
+  status: z.enum(["pending", "confirmed", "shipped", "delivered", "cancelled"]),
+  createdAt: z.date().optional(),
+}).strict();
+
+export const orderEntity: KVMEntity<typeof orderSchema.shape> = {
+  name: "orders",
+  primaryKey: [{
+    name: "orders",
+    key: "id",
+  }],
+  secondaryIndexes: [{
+    name: "orders_by_user",
+    key: [{
+      name: "orders_by_user",
+      key: "userId",
+    }],
+    valueType: ValueType.KEY,
+    valueKey: "id",
+  }, {
+    name: "orders_by_status",
+    key: [{
+      name: "orders_by_status",
+      key: "status",
+    }],
+    valueType: ValueType.KEY,
+    valueKey: "id",
+  }],
+  schema: orderSchema,
+};
+
+// Inventory entity for atomic stock management
+const inventorySchema = z.object({
+  productId: z.string(),
+  quantity: z.number(),
+  reserved: z.number().default(0),
+  lastUpdated: z.date().optional(),
+}).strict();
+
+export const inventoryEntity: KVMEntity<typeof inventorySchema.shape> = {
+  name: "inventory",
+  primaryKey: [{
+    name: "inventory",
+    key: "productId",
+  }],
+  schema: inventorySchema,
+};
+
+// Payment entity for atomic financial transactions
+const paymentSchema = z.object({
+  id: z.string(),
+  orderId: z.string(),
+  amount: z.number(),
+  method: z.enum(["credit_card", "paypal", "bank_transfer"]),
+  status: z.enum(["pending", "completed", "failed", "refunded"]),
+  transactionId: z.string().optional(),
+  createdAt: z.date().optional(),
+}).strict();
+
+export const paymentEntity: KVMEntity<typeof paymentSchema.shape> = {
+  name: "payments",
+  primaryKey: [{
+    name: "payments",
+    key: "id",
+  }],
+  secondaryIndexes: [{
+    name: "payments_by_order",
+    key: [{
+      name: "payments_by_order",
+      key: "orderId",
+    }],
+    valueType: ValueType.KEY,
+    valueKey: "id",
+  }],
+  schema: paymentSchema,
+};
+
+// Counter entity for atomic numeric operations
+const counterSchema = z.object({
+  name: z.string(),
+  value: z.bigint().default(0n),
+  lastIncrement: z.date().optional(),
+}).strict();
+
+export const counterEntity: KVMEntity<typeof counterSchema.shape> = {
+  name: "counters",
+  primaryKey: [{
+    name: "counters",
+    key: "name",
+  }],
+  schema: counterSchema,
+};
+
+// ============================================================================
 // TTL Examples
 // ============================================================================
 
