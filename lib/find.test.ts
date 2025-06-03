@@ -182,4 +182,92 @@ describe("find", () => {
     expect(vote?.value?.postId).toBe(postId);
     expect(vote?.value?.userLogin).toBe(userLogin);
   });
+
+  it("should return null when secondary index not found", async () => {
+    const result = await findUnique<Post>(
+      postEntity,
+      kv,
+      "test-value",
+      "non_existent_index",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("should handle number key type", async () => {
+    // Test using a number as key which goes through else branch
+    // Create a custom entity that uses numeric IDs
+    const numericEntity = {
+      ...postEntity,
+      primaryKey: [{ name: "numeric_posts" }],
+    };
+    
+    // Set a record with numeric key
+    await kv.set(["numeric_posts", 123], { id: 123, title: "Numeric Post" });
+    
+    // Find using direct numeric key - tests else branch at line 77
+    const result = await findUnique<{ id: number; title: string }>(numericEntity, kv, 123);
+    
+    expect(result?.value?.id).toBe(123);
+  });
+
+  it("should throw when findUniqueOrThrow doesn't find record", async () => {
+    await expect(
+      findUniqueOrThrow<Post>(postEntity, kv, "non-existent-post")
+    ).rejects.toThrow("Not found");
+  });
+
+  it("should throw when findUniqueOrThrow doesn't find by secondary index", async () => {
+    await expect(
+      findUniqueOrThrow<Post>(
+        postEntity,
+        kv,
+        "/non-existent-slug",
+        "posts_by_slug",
+      )
+    ).rejects.toThrow("Not found");
+  });
+
+  it("should return null when findFirst finds no records", async () => {
+    // Create a custom entity that won't have any records
+    const emptyEntity = {
+      ...postEntity,
+      name: "empty_posts",
+      primaryKey: [{ name: "empty_posts", key: "id" }],
+    };
+
+    const result = await findFirst(emptyEntity, kv);
+    expect(result).toBeNull();
+  });
+
+  it("should throw when findFirstOrThrow finds no records", async () => {
+    // Create a custom entity that won't have any records
+    const emptyEntity = {
+      ...postEntity,
+      name: "empty_posts",
+      primaryKey: [{ name: "empty_posts", key: "id" }],
+    };
+
+    await expect(
+      findFirstOrThrow(emptyEntity, kv)
+    ).rejects.toThrow("Not found");
+  });
+
+  it("should handle limit option in findMany", async () => {
+    // Test limit option
+    const limited = await findMany<Post>(postEntity, kv, { limit: 1 });
+    expect(limited.length).toBe(1);
+
+    // Test with different limit
+    const allPosts = await findMany<Post>(postEntity, kv, { limit: 10 });
+    expect(allPosts.length).toBe(2); // We only have 2 posts
+  });
+
+  it("should handle reverse option in findMany", async () => {
+    const normalOrder = await findMany<Post>(postEntity, kv);
+    const reverseOrder = await findMany<Post>(postEntity, kv, { reverse: true });
+
+    expect(normalOrder[0].value.id).toBe("post1");
+    expect(reverseOrder[0].value.id).toBe("post2");
+  });
 });
