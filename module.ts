@@ -215,5 +215,31 @@ export {
   HookTimeoutError,
 } from "./lib/middleware-types.ts";
 
+// Watch/Stream API
+export type {
+  BatchWatchEvent,
+  BatchWatchOptions,
+  SSEOptions,
+  WatchCallback,
+  WatchEvent,
+  WatchEventType,
+  WatchManyOptions,
+  WatchOptions,
+  WatchRelationOptions,
+  WatchResult,
+  WatchState,
+  WatchStream,
+  WebSocketOptions,
+} from "./lib/watch-types.ts";
+export {
+  getWatchManager,
+  initializeWatchManager,
+  watchQuery,
+  watchRecord,
+  watchRecords,
+  WatchManager,
+} from "./lib/watch.ts";
+export { WatchUtils } from "./lib/watch-utils.ts";
+
 // Re-export Zod types for convenience
 export type { ZodObject, ZodRawShape } from "zod";

@@ -461,6 +461,60 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     // For composite keys or complex scenarios
     return this as any;
   }
+
+  /**
+   * Watch this specific document for real-time changes
+   */
+  async watch(
+    options?: import("./watch-types.ts").WatchOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<any>> {
+    const ModelClass = this.constructor as ModelConstructor<T>;
+    const primaryKeyValue = this._getPrimaryKeyValue();
+    
+    const { watchRecord } = await import("./watch.ts");
+    const result = await watchRecord(ModelClass.entity, ModelClass.kv, primaryKeyValue, options);
+    
+    // Transform the stream to return model instances
+    const originalStream = result.stream;
+    const modelStream = new ReadableStream({
+      start(controller) {
+        const reader = originalStream.getReader();
+        
+        const processStream = async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              
+              if (done) {
+                controller.close();
+                break;
+              }
+
+              // Transform the event to include model instance
+              const transformedEvent = {
+                ...value,
+                value: value.value ? new ModelClass(value.value as any) : null,
+                previousValue: value.previousValue ? new ModelClass(value.previousValue as any) : null,
+              };
+              
+              controller.enqueue(transformedEvent);
+            }
+          } catch (error) {
+            controller.error(error);
+          } finally {
+            reader.releaseLock();
+          }
+        };
+
+        processStream();
+      },
+    });
+
+    return {
+      ...result,
+      stream: modelStream,
+    };
+  }
 }
 
 /**
@@ -1135,6 +1189,223 @@ export function createModelClass<T = any>(
      */
     static areHooksEnabled(): boolean {
       return this.hooks.isEnabled();
+    }
+
+    // ============================================================================
+    // Watch/Stream Methods
+    // ============================================================================
+
+    /**
+     * Watch a specific document by ID for real-time changes
+     */
+    static async watch(
+      id: string,
+      options?: import("./watch-types.ts").WatchOptions,
+    ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
+      const { watchRecord } = await import("./watch.ts");
+      const result = await watchRecord(this.entity, this.kv, id, options);
+      
+      // Transform the stream to return model instances
+      const originalStream = result.stream;
+      const modelStream = new ReadableStream({
+        start(controller) {
+          const reader = originalStream.getReader();
+          
+          const processStream = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  controller.close();
+                  break;
+                }
+
+                // Transform the event to include model instance
+                const transformedEvent = {
+                  ...value,
+                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
+                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                };
+                
+                controller.enqueue(transformedEvent);
+              }
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
+          processStream();
+        },
+      });
+
+      return {
+        ...result,
+        stream: modelStream,
+      };
+    }
+
+    /**
+     * Watch multiple documents by IDs for real-time changes
+     */
+    static async watchMany(
+      ids: string[],
+      options?: import("./watch-types.ts").WatchOptions,
+    ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
+      const { watchRecords } = await import("./watch.ts");
+      const result = await watchRecords(this.entity, this.kv, ids, options);
+      
+      // Transform the stream to return model instances
+      const originalStream = result.stream;
+      const modelStream = new ReadableStream({
+        start(controller) {
+          const reader = originalStream.getReader();
+          
+          const processStream = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  controller.close();
+                  break;
+                }
+
+                // Transform the event to include model instance
+                const transformedEvent = {
+                  ...value,
+                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
+                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                };
+                
+                controller.enqueue(transformedEvent);
+              }
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
+          processStream();
+        },
+      });
+
+      return {
+        ...result,
+        stream: modelStream,
+      };
+    }
+
+    /**
+     * Watch documents matching a query for real-time changes
+     */
+    static async watchQuery(
+      options?: import("./watch-types.ts").WatchManyOptions,
+    ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
+      const { watchQuery } = await import("./watch.ts");
+      const result = await watchQuery(this.entity, this.kv, options);
+      
+      // Transform the stream to return model instances
+      const originalStream = result.stream;
+      const modelStream = new ReadableStream({
+        start(controller) {
+          const reader = originalStream.getReader();
+          
+          const processStream = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  controller.close();
+                  break;
+                }
+
+                // Transform the event to include model instance
+                const transformedEvent = {
+                  ...value,
+                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
+                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                };
+                
+                controller.enqueue(transformedEvent);
+              }
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
+          processStream();
+        },
+      });
+
+      return {
+        ...result,
+        stream: modelStream,
+      };
+    }
+
+    /**
+     * Watch related documents for this model
+     */
+    static async watchRelations(
+      id: string,
+      relationName: string,
+      options?: Omit<import("./watch-types.ts").WatchRelationOptions, 'relation'>,
+    ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
+      const { WatchManager } = await import("./watch.ts");
+      const manager = new WatchManager(this.kv);
+      
+      const result = await manager.watchRelations(this.entity, id, {
+        ...options,
+        relation: relationName,
+      });
+      
+      // Transform the stream to return model instances
+      const originalStream = result.stream;
+      const modelStream = new ReadableStream({
+        start(controller) {
+          const reader = originalStream.getReader();
+          
+          const processStream = async () => {
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                  controller.close();
+                  break;
+                }
+
+                // Transform the event to include model instance
+                const transformedEvent = {
+                  ...value,
+                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
+                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                };
+                
+                controller.enqueue(transformedEvent);
+              }
+            } catch (error) {
+              controller.error(error);
+            } finally {
+              reader.releaseLock();
+            }
+          };
+
+          processStream();
+        },
+      });
+
+      return {
+        ...result,
+        stream: modelStream,
+      };
     }
   }
 
