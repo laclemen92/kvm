@@ -1,11 +1,10 @@
 /**
  * @module
  *
- * Provides a way to interact with data in DenoKV.
- * Define a KVMEntity and then use it to perform CRUD
- * operations in DenoKv. KVMEntity has a zod schema
- * in order to validate data being stored!
+ * KVM - A powerful ORM for Deno KV that provides both functional and model-based APIs.
+ * Define entities and use them to perform CRUD operations with full type safety.
  *
+ * ## Functional API (Legacy)
  * @example
  * ```ts
  * import { create, KVMEntity, ValueType } from "@laclemen92/kvm";
@@ -13,54 +12,99 @@
  *
  * const userSchema = z.object({
  *    id: z.string(),
- *    email: z.string().email("Invalid email format"),
+ *    email: z.string().email(),
  *    age: z.number(),
- *    sessionId: z.string(),
- *  }).strict();
- * export const userEntity: KVMEntity<typeof userSchema.shape> = {
- *    primaryKey: [{
- *      name: "users",
- *      key: "id",
- *    }],
- *    secondaryIndexes: [{
- *      name: "users_by_email",
- *      key: [{
- *        name: "users_by_email",
- *        key: "email",
- *       }],
- *      valueType: ValueType.KEY,
- *      valueKey: "id",
- *    }, {
- *      name: "users_by_session",
- *      key: [{
- *        name: "users_by_session",
- *        key: "sessionId",
- *      }],
- *      valueType: ValueType.KEY,
- *      valueKey: "id",
- *    }],
- *    schema: userSchema,
+ * }).strict();
+ *
+ * const userEntity: KVMEntity = {
  *    name: "users",
- *  };
- * type User = z.infer<typeof userEntity.schema>;
+ *    primaryKey: [{ name: "users", key: "id" }],
+ *    schema: userSchema,
+ * };
  *
  * const kv = await Deno.openKv();
- *
- * const user = await create<User>(userEntity, kv, {
+ * const user = await create(userEntity, kv, {
  *    id: "user1",
  *    email: "test@test.com",
  *    age: 31,
- *    sessionId: "123"
+ * });
+ * ```
+ *
+ * ## Model-Based API (Recommended)
+ * @example
+ * ```ts
+ * import { createKVM } from "@laclemen92/kvm";
+ * import { z } from "zod";
+ *
+ * const kvm = await createKVM();
+ *
+ * const User = kvm.model('users', {
+ *   schema: z.object({
+ *     id: z.string(),
+ *     email: z.string().email(),
+ *     age: z.number(),
+ *   }),
+ *   primaryKey: [{ name: "users", key: "id" }],
  * });
  *
- * await kv.close();
+ * // Create and work with documents
+ * const user = await User.create({
+ *   id: "user1",
+ *   email: "test@test.com",
+ *   age: 31,
+ * });
+ *
+ * user.age = 32;
+ * await user.save();
+ *
+ * const foundUser = await User.findById("user1");
+ * await user.delete();
+ * 
+ * // Query Builder for complex queries
+ * const users = await User
+ *   .where('age').gte(18)
+ *   .where('status').equals('active')
+ *   .orderBy('createdAt', 'desc')
+ *   .limit(10)
+ *   .find();
  * ```
  */
 
+// Functional API (Legacy - maintained for backward compatibility)
 export * from "./lib/create.ts";
 export * from "./lib/delete.ts";
 export * from "./lib/find.ts";
 export * from "./lib/update.ts";
 export * from "./lib/types.ts";
 
+// Model-Based API (New - Recommended)
+export { KVM, createKVM } from "./lib/kvm.ts";
+export { BaseModel } from "./lib/model.ts";
+export type {
+  ModelDefinition,
+  ModelDocument,
+  ModelStatic,
+  ModelConstructor,
+  InferModel,
+  CreateOptions,
+  UpdateOptions,
+  DeleteOptions,
+  FindOptions,
+} from "./lib/model-types.ts";
+
+// Query Builder API
+export type {
+  QueryBuilder,
+  WhereClause,
+  QueryConfig,
+  WhereCondition,
+  SortConfig,
+  SortDirection,
+  ComparisonOperator,
+  QueryExecutor,
+  QueryBuilderFactory,
+} from "./lib/query-types.ts";
+export { KVMQueryBuilder } from "./lib/query-builder.ts";
+
+// Re-export Zod types for convenience
 export type { ZodObject, ZodRawShape } from "zod";
