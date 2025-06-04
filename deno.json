@@ -8,6 +8,7 @@
     "@std/datetime": "jsr:@std/datetime@^0.221.0",
     "@std/fs": "jsr:@std/fs@^0.221.0",
     "@std/testing/mock": "jsr:@std/testing@^0.221.0/mock",
+    "@std/ulid": "jsr:@std/ulid@^0.221.0",
     "zod": "npm:zod@^3.23.8"
   },
   "tasks": {

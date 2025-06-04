@@ -89,6 +89,11 @@ export * from "./lib/types.ts";
 // Model-Based API (New - Recommended)
 export { createKVM, KVM } from "./lib/kvm.ts";
 export { BaseModel } from "./lib/model.ts";
+
+// Fluent Model Definition API (Latest - Highly Recommended)
+export { FluentKVM, FluentModelBuilder, FieldBuilder } from "./lib/fluent-model.ts";
+export { SimpleFluentKVM, SimpleField, field } from "./lib/fluent-model-simple.ts";
+export type { SimpleModelDefinition } from "./lib/fluent-model-simple.ts";
 export type {
   CreateOptions,
   DeleteOptions,

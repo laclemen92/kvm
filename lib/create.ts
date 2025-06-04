@@ -28,8 +28,9 @@ export const create = async <T = unknown>(
   // should it matter if it is an update or create? yea it does cause if it is an update, we can spread
 
   // first check that the schema and value are good to go
-  entity.schema.parse(value);
-  const pk: Deno.KvKey = buildPrimaryKey(entity.primaryKey, value);
+  // parse() returns the transformed value
+  const transformedValue = entity.schema.parse(value);
+  const pk: Deno.KvKey = buildPrimaryKey(entity.primaryKey, transformedValue);
   const operation = kv.atomic();
   const checks = [];
   const sets = [];
@@ -49,13 +50,13 @@ export const create = async <T = unknown>(
   }
 
   checks.push({ key: pk, versionstamp: null });
-  sets.push({ key: pk, value, options: processedOptions });
+  sets.push({ key: pk, value: transformedValue, options: processedOptions });
 
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
       const secondaryIndex: Deno.KvKey = buildPrimaryKey(
         secondaryIndexDef.key,
-        value,
+        transformedValue,
       );
       // }
 
@@ -64,42 +65,47 @@ export const create = async <T = unknown>(
       if (
         secondaryIndexDef.valueType === ValueType.KEY &&
         secondaryIndexDef.valueKey &&
-        isStringKeyedValueObject(value)
+        isStringKeyedValueObject(transformedValue)
       ) {
         sets.push({
           key: secondaryIndex,
-          value: value[secondaryIndexDef.valueKey],
+          value: transformedValue[secondaryIndexDef.valueKey],
           options: processedOptions,
         });
       } else {
-        sets.push({ key: secondaryIndex, value, options: processedOptions });
+        sets.push({ key: secondaryIndex, value: transformedValue, options: processedOptions });
       }
     });
   }
 
   if (entity.relations) {
     entity.relations.forEach((relation: Relation) => {
-      if (!isStringKeyedValueObject(value)) return;
+      if (!isStringKeyedValueObject(transformedValue)) return;
 
       switch (relation.type) {
         case RelationType.ONE_TO_MANY:
         case "one-to-many" as any: // Backward compatibility
-          // Create index for hasMany relations: [parentEntity, foreignKey, childEntity, childId]
-          const relationKey = [
-            relation.entityName,
-            ...relation.fields.map((field) => value[field]),
-            ...pk,
-          ];
+          // Only create relation keys if this entity has the foreign key field
+          // This handles child entities that reference a parent (e.g., Product -> Category)
+          const hasForeignKeyFields = relation.fields.every(field => field in transformedValue);
+          if (hasForeignKeyFields) {
+            // Create index for hasMany relations: [parentEntity, foreignKey, childEntity, childId]
+            const relationKey = [
+              relation.entityName,
+              ...relation.fields.map((field) => transformedValue[field]),
+              ...pk,
+            ];
 
-          checks.push({ key: relationKey, versionstamp: null });
-          if (relation.valueType === ValueType.KEY && relation.valueKey) {
-            sets.push({
-              key: relationKey,
-              value: value[relation.valueKey],
-              options: processedOptions,
-            });
-          } else {
-            sets.push({ key: relationKey, value, options: processedOptions });
+            checks.push({ key: relationKey, versionstamp: null });
+            if (relation.valueType === ValueType.KEY && relation.valueKey) {
+              sets.push({
+                key: relationKey,
+                value: transformedValue[relation.valueKey],
+                options: processedOptions,
+              });
+            } else {
+              sets.push({ key: relationKey, value: transformedValue, options: processedOptions });
+            }
           }
           break;
 
@@ -136,10 +142,10 @@ export const create = async <T = unknown>(
   // return res;
 
   let findKey: Deno.KvKey | Deno.KvKeyPart | null = null;
-  if (entity.primaryKey[0].key && isStringKeyedValueObject(value)) {
-    findKey = value[entity.primaryKey[0].key];
-  } else if (isDenoKvKeyPart(value)) {
-    findKey = value;
+  if (entity.primaryKey[0].key && isStringKeyedValueObject(transformedValue)) {
+    findKey = transformedValue[entity.primaryKey[0].key];
+  } else if (isDenoKvKeyPart(transformedValue)) {
+    findKey = transformedValue;
   }
   if (!findKey) {
     throw new Error("couldn't find key");

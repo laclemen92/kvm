@@ -42,8 +42,8 @@ export const update = async <T = unknown>(
     ...value,
   } as T;
 
-  // Validate the final value against the schema
-  entity.schema.parse(valueToUpdate);
+  // Validate and transform the final value against the schema
+  const transformedValueToUpdate = entity.schema.parse(valueToUpdate);
 
   // Process TTL value if provided
   let processedOptions = options;
@@ -60,19 +60,19 @@ export const update = async <T = unknown>(
   }
 
   const operation = kv.atomic();
-  operation.set(pk, valueToUpdate, processedOptions as { expireIn?: number });
+  operation.set(pk, transformedValueToUpdate, processedOptions as { expireIn?: number });
 
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
       if (secondaryIndexDef.valueType === ValueType.VALUE) {
         const secondaryIndex: Deno.KvKey = buildPrimaryKey(
           secondaryIndexDef.key,
-          valueToUpdate,
+          transformedValueToUpdate,
         );
 
         operation.set(
           secondaryIndex,
-          valueToUpdate,
+          transformedValueToUpdate,
           processedOptions as { expireIn?: number },
         );
       }
