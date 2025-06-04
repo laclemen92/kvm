@@ -55,6 +55,7 @@ import {
 } from "./errors.ts";
 import type { AtomicMutationBuilder } from "./atomic-types.ts";
 import { createAtomicBuilder } from "./atomic-builder.ts";
+import { TTL } from "./ttl-utils.ts";
 
 /**
  * Base model class that provides instance methods for documents
@@ -997,8 +998,22 @@ export function createModelClass<T = any>(
     ): Promise<(DynamicModel & T)[]> {
       const builder = this.atomic();
 
+      // Process TTL if provided
+      let processedOptions: { expireIn?: number } | undefined;
+      if (options?.expireIn !== undefined) {
+        const expireInMs = typeof options.expireIn === "string" 
+          ? TTL.parse(options.expireIn) 
+          : options.expireIn;
+        
+        if (!TTL.isValid(expireInMs)) {
+          throw new Error(`Invalid TTL value: ${options.expireIn}`);
+        }
+        
+        processedOptions = { expireIn: expireInMs };
+      }
+
       for (const item of data) {
-        builder.create(this.entity, item, options);
+        builder.create(this.entity, item, processedOptions);
       }
 
       const result = await builder.commit();
@@ -1027,7 +1042,21 @@ export function createModelClass<T = any>(
       const builder = this.atomic();
 
       for (const update of updates) {
-        builder.update(this.entity, update.key, update.data, update.options);
+        // Process TTL if provided
+        let processedOptions: { expireIn?: number } | undefined;
+        if (update.options?.expireIn !== undefined) {
+          const expireInMs = typeof update.options.expireIn === "string" 
+            ? TTL.parse(update.options.expireIn) 
+            : update.options.expireIn;
+          
+          if (!TTL.isValid(expireInMs)) {
+            throw new Error(`Invalid TTL value: ${update.options.expireIn}`);
+          }
+          
+          processedOptions = { expireIn: expireInMs };
+        }
+        
+        builder.update(this.entity, update.key, update.data, processedOptions);
       }
 
       const result = await builder.commit();

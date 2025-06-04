@@ -7,6 +7,8 @@ import type {
 } from "./types.ts";
 import { buildPrimaryKey } from "./utils.ts";
 import { findUnique } from "./find.ts";
+import { TTL } from "./ttl-utils.ts";
+import type { TTLValue } from "./model-types.ts";
 
 /**
  * Update a record in DenoKv
@@ -23,7 +25,7 @@ export const update = async <T = unknown>(
   kv: Deno.Kv,
   id: Deno.KvKeyPart | StringKeyedValueObject,
   value: Partial<T>,
-  options?: { expireIn?: number; onlyChangedFields?: boolean },
+  options?: { expireIn?: TTLValue; onlyChangedFields?: boolean },
 ): Promise<Deno.KvEntryMaybe<T> | null> => {
   // do logic here to do all the setting for us
   // should it matter if it is an update or create? yea it does cause if it is an update, we can spread
@@ -43,8 +45,22 @@ export const update = async <T = unknown>(
   // Validate the final value against the schema
   entity.schema.parse(valueToUpdate);
 
+  // Process TTL value if provided
+  let processedOptions = options;
+  if (options?.expireIn !== undefined) {
+    const expireInMs = typeof options.expireIn === "string" 
+      ? TTL.parse(options.expireIn) 
+      : options.expireIn;
+    
+    if (!TTL.isValid(expireInMs)) {
+      throw new Error(`Invalid TTL value: ${options.expireIn}`);
+    }
+    
+    processedOptions = { ...options, expireIn: expireInMs };
+  }
+
   const operation = kv.atomic();
-  operation.set(pk, valueToUpdate, options);
+  operation.set(pk, valueToUpdate, processedOptions as { expireIn?: number });
 
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
@@ -54,7 +70,7 @@ export const update = async <T = unknown>(
           valueToUpdate,
         );
 
-        operation.set(secondaryIndex, valueToUpdate, options);
+        operation.set(secondaryIndex, valueToUpdate, processedOptions as { expireIn?: number });
       }
     });
   }
@@ -95,7 +111,7 @@ export const updateMany = async <T = unknown>(
   updateObjects: {
     id: Deno.KvKeyPart;
     value: Partial<T>;
-    options?: { expireIn?: number; onlyChangedFields?: boolean };
+    options?: { expireIn?: TTLValue; onlyChangedFields?: boolean };
   }[],
 ): Promise<(Deno.KvEntryMaybe<T> | null)[]> => {
   const results = [];

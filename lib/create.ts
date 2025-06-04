@@ -6,6 +6,8 @@ import {
 import { RelationType, ValueType } from "./types.ts";
 import type { KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { findUnique } from "./find.ts";
+import { TTL } from "./ttl-utils.ts";
+import type { TTLValue } from "./model-types.ts";
 
 /**
  * Create a record in Deno.
@@ -20,7 +22,7 @@ export const create = async <T = unknown>(
   entity: KVMEntity,
   kv: Deno.Kv,
   value: T,
-  options?: { expireIn?: number },
+  options?: { expireIn?: TTLValue },
 ): Promise<Deno.KvEntryMaybe<T> | null> => {
   // do logic here to do all the setting for us
   // should it matter if it is an update or create? yea it does cause if it is an update, we can spread
@@ -32,8 +34,22 @@ export const create = async <T = unknown>(
   const checks = [];
   const sets = [];
 
+  // Process TTL value if provided
+  let processedOptions = options;
+  if (options?.expireIn !== undefined) {
+    const expireInMs = typeof options.expireIn === "string" 
+      ? TTL.parse(options.expireIn) 
+      : options.expireIn;
+    
+    if (!TTL.isValid(expireInMs)) {
+      throw new Error(`Invalid TTL value: ${options.expireIn}`);
+    }
+    
+    processedOptions = { ...options, expireIn: expireInMs };
+  }
+
   checks.push({ key: pk, versionstamp: null });
-  sets.push({ key: pk, value, options });
+  sets.push({ key: pk, value, options: processedOptions });
 
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
@@ -53,9 +69,10 @@ export const create = async <T = unknown>(
         sets.push({
           key: secondaryIndex,
           value: value[secondaryIndexDef.valueKey],
+          options: processedOptions,
         });
       } else {
-        sets.push({ key: secondaryIndex, value });
+        sets.push({ key: secondaryIndex, value, options: processedOptions });
       }
     });
   }
@@ -76,9 +93,9 @@ export const create = async <T = unknown>(
 
           checks.push({ key: relationKey, versionstamp: null });
           if (relation.valueType === ValueType.KEY && relation.valueKey) {
-            sets.push({ key: relationKey, value: value[relation.valueKey] });
+            sets.push({ key: relationKey, value: value[relation.valueKey], options: processedOptions });
           } else {
-            sets.push({ key: relationKey, value });
+            sets.push({ key: relationKey, value, options: processedOptions });
           }
           break;
 
@@ -104,7 +121,7 @@ export const create = async <T = unknown>(
   });
   sets.forEach((setParams) => {
     const { key, value, options } = setParams;
-    operation.set(key, value, options);
+    operation.set(key, value, options as { expireIn?: number });
   });
 
   const res = await operation.commit();

@@ -37,14 +37,28 @@ export interface ModelDefinition<T extends ZodRawShape = ZodRawShape> {
 }
 
 /**
+ * TTL (Time To Live) value - can be milliseconds or human-readable string
+ * Examples: 300000, "5m", "1h", "30s", "2d"
+ */
+export type TTLValue = number | string;
+
+/**
  * Options for model operations
  */
 export interface CreateOptions {
-  expireIn?: number;
+  /** 
+   * Time to live in milliseconds or human-readable format
+   * Examples: 300000, "5m", "1h", "30s", "2d"
+   */
+  expireIn?: TTLValue;
 }
 
 export interface UpdateOptions {
-  expireIn?: number;
+  /** 
+   * Time to live in milliseconds or human-readable format
+   * Examples: 300000, "5m", "1h", "30s", "2d"
+   */
+  expireIn?: TTLValue;
 }
 
 export interface DeleteOptions {

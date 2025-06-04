@@ -15,6 +15,8 @@ import { update } from "./update.ts";
 import { deleteKey } from "./delete.ts";
 import { findUnique } from "./find.ts";
 import { buildPrimaryKey } from "./utils.ts";
+import { TTL } from "./ttl-utils.ts";
+import type { TTLValue } from "./model-types.ts";
 import {
   KVMBatchOperationError,
   KVMBatchValidationError,
@@ -97,6 +99,18 @@ export async function createMany<T>(
     expireIn,
   } = options;
 
+  // Process TTL value if provided
+  let processedExpireIn: number | undefined;
+  if (expireIn !== undefined) {
+    processedExpireIn = typeof expireIn === "string" 
+      ? TTL.parse(expireIn) 
+      : expireIn;
+    
+    if (!TTL.isValid(processedExpireIn)) {
+      throw new Error(`Invalid TTL value: ${expireIn}`);
+    }
+  }
+
   const result: BatchCreateResult<T> = {
     created: [],
     failed: [],
@@ -157,7 +171,7 @@ export async function createMany<T>(
 
           // Check that key doesn't exist
           atomicOp.check({ key: pk, versionstamp: null });
-          atomicOp.set(pk, item, { expireIn });
+          atomicOp.set(pk, item, processedExpireIn ? { expireIn: processedExpireIn } : undefined);
 
           // Handle secondary indexes
           if (entity.secondaryIndexes) {
@@ -170,9 +184,9 @@ export async function createMany<T>(
                 secondaryIndex.valueType === "KEY" && secondaryIndex.valueKey
               ) {
                 const value = (item as any)[secondaryIndex.valueKey];
-                atomicOp.set(secondaryKey, value, { expireIn });
+                atomicOp.set(secondaryKey, value, processedExpireIn ? { expireIn: processedExpireIn } : undefined);
               } else {
-                atomicOp.set(secondaryKey, item, { expireIn });
+                atomicOp.set(secondaryKey, item, processedExpireIn ? { expireIn: processedExpireIn } : undefined);
               }
             }
           }
@@ -187,9 +201,9 @@ export async function createMany<T>(
 
               if (relation.valueType === "KEY" && relation.valueKey) {
                 const value = (item as any)[relation.valueKey];
-                atomicOp.set(relationKey, value, { expireIn });
+                atomicOp.set(relationKey, value, processedExpireIn ? { expireIn: processedExpireIn } : undefined);
               } else {
-                atomicOp.set(relationKey, item, { expireIn });
+                atomicOp.set(relationKey, item, processedExpireIn ? { expireIn: processedExpireIn } : undefined);
               }
             }
           }
@@ -308,6 +322,18 @@ export async function updateMany<T>(
     expireIn,
   } = options;
 
+  // Process TTL value if provided
+  let processedExpireIn: number | undefined;
+  if (expireIn !== undefined) {
+    processedExpireIn = typeof expireIn === "string" 
+      ? TTL.parse(expireIn) 
+      : expireIn;
+    
+    if (!TTL.isValid(processedExpireIn)) {
+      throw new Error(`Invalid TTL value: ${expireIn}`);
+    }
+  }
+
   const result: BatchUpdateResult<T> = {
     updated: [],
     notFound: [],
@@ -377,9 +403,15 @@ export async function updateMany<T>(
             }
 
             const pk = buildPrimaryKey(entity.primaryKey, updateItem.key);
-            atomicOp.set(pk, mergedData, {
-              expireIn: updateItem.options?.expireIn || expireIn,
-            });
+            // Process individual item TTL
+            let itemExpireIn = processedExpireIn;
+            if (updateItem.options?.expireIn !== undefined) {
+              itemExpireIn = typeof updateItem.options.expireIn === "string"
+                ? TTL.parse(updateItem.options.expireIn)
+                : updateItem.options.expireIn;
+            }
+            
+            atomicOp.set(pk, mergedData, itemExpireIn ? { expireIn: itemExpireIn } : undefined);
 
             // Update secondary indexes
             if (entity.secondaryIndexes) {
@@ -400,13 +432,9 @@ export async function updateMany<T>(
                   secondaryIndex.valueType === "KEY" && secondaryIndex.valueKey
                 ) {
                   const value = mergedData[secondaryIndex.valueKey];
-                  atomicOp.set(newSecondaryKey, value, {
-                    expireIn: updateItem.options?.expireIn || expireIn,
-                  });
+                  atomicOp.set(newSecondaryKey, value, itemExpireIn ? { expireIn: itemExpireIn } : undefined);
                 } else {
-                  atomicOp.set(newSecondaryKey, mergedData, {
-                    expireIn: updateItem.options?.expireIn || expireIn,
-                  });
+                  atomicOp.set(newSecondaryKey, mergedData, itemExpireIn ? { expireIn: itemExpireIn } : undefined);
                 }
               }
             }
