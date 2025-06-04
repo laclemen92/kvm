@@ -452,13 +452,24 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
 
     // Execute with timeout
     const commitPromise = atomic.commit();
-    const timeoutPromise = options.timeout
-      ? this.timeoutPromise(options.timeout)
-      : null;
-
+    let timeoutId: number | undefined;
+    
     let result: Deno.KvCommitResult | Deno.KvCommitError;
-    if (timeoutPromise) {
-      result = await Promise.race([commitPromise, timeoutPromise]);
+    if (options.timeout) {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Atomic transaction timed out after ${options.timeout}ms`));
+        }, options.timeout);
+      });
+      
+      try {
+        result = await Promise.race([commitPromise, timeoutPromise]);
+      } finally {
+        // Always clear the timeout to prevent timer leaks
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+      }
     } else {
       result = await commitPromise;
     }
@@ -654,17 +665,6 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     mutation: AtomicMaxMutation,
   ): void {
     atomic.max(mutation.key, mutation.value);
-  }
-
-  /**
-   * Create a timeout promise
-   */
-  private timeoutPromise(timeout: number): Promise<never> {
-    return new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Atomic transaction timed out after ${timeout}ms`));
-      }, timeout);
-    });
   }
 
   /**

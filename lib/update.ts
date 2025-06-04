@@ -48,14 +48,14 @@ export const update = async <T = unknown>(
   // Process TTL value if provided
   let processedOptions = options;
   if (options?.expireIn !== undefined) {
-    const expireInMs = typeof options.expireIn === "string" 
-      ? TTL.parse(options.expireIn) 
+    const expireInMs = typeof options.expireIn === "string"
+      ? TTL.parse(options.expireIn)
       : options.expireIn;
-    
+
     if (!TTL.isValid(expireInMs)) {
       throw new Error(`Invalid TTL value: ${options.expireIn}`);
     }
-    
+
     processedOptions = { ...options, expireIn: expireInMs };
   }
 
@@ -70,7 +70,11 @@ export const update = async <T = unknown>(
           valueToUpdate,
         );
 
-        operation.set(secondaryIndex, valueToUpdate, processedOptions as { expireIn?: number });
+        operation.set(
+          secondaryIndex,
+          valueToUpdate,
+          processedOptions as { expireIn?: number },
+        );
       }
     });
   }

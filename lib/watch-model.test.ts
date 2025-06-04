@@ -374,13 +374,13 @@ Deno.test("Model watch - error scenarios", async () => {
     const events: any[] = [];
 
     const reader = watchResult.stream.getReader();
-    
+
     // Use a timeout to prevent hanging
     const timeoutId = setTimeout(() => {
       reader.cancel();
       reader.releaseLock();
     }, 100); // Wait 100ms for any events
-    
+
     try {
       const { done, value } = await reader.read();
       if (!done && value) {

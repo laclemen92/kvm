@@ -3,13 +3,13 @@ import type { Key, KeyParts, StringKeyedValueObject } from "./types.ts";
 export const isDenoKvKeyPart = (
   value: StringKeyedValueObject | unknown | Deno.KvKeyPart,
 ): value is Deno.KvKeyPart => {
-  return typeof value === "string" || 
-         typeof value === "number" || 
-         typeof value === "bigint" || 
-         typeof value === "boolean" ||
-         value instanceof Uint8Array ||
-         value instanceof ArrayBuffer ||
-         ArrayBuffer.isView(value);
+  return typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "bigint" ||
+    typeof value === "boolean" ||
+    value instanceof Uint8Array ||
+    value instanceof ArrayBuffer ||
+    ArrayBuffer.isView(value);
 };
 
 export const isStringKeyedValueObject = (

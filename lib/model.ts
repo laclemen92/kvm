@@ -56,6 +56,7 @@ import {
 import type { AtomicMutationBuilder } from "./atomic-types.ts";
 import { createAtomicBuilder } from "./atomic-builder.ts";
 import { TTL } from "./ttl-utils.ts";
+import { AtomicUtils, ModelAtomicUtils } from "./atomic-utils.ts";
 
 /**
  * Base model class that provides instance methods for documents
@@ -546,6 +547,47 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       toWebSocket: result.toWebSocket,
     };
   }
+
+  /**
+   * Increment a counter field for this document
+   */
+  async incrementField(
+    field: string,
+    amount: number | bigint = 1,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
+    const ModelClass = this.constructor as ModelConstructor<T>;
+    const primaryKeyValue = this._getPrimaryKeyValue();
+    return await ModelClass.incrementField(primaryKeyValue, field, amount);
+  }
+
+  /**
+   * Increment multiple counter fields for this document
+   */
+  async incrementFields(
+    fields: Record<string, number | bigint>,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
+    const ModelClass = this.constructor as ModelConstructor<T>;
+    const primaryKeyValue = this._getPrimaryKeyValue();
+    return await ModelClass.incrementFields(primaryKeyValue, fields);
+  }
+
+  /**
+   * Get all counter values for this document
+   */
+  async getCounters(): Promise<Record<string, bigint>> {
+    const ModelClass = this.constructor as ModelConstructor<T>;
+    const primaryKeyValue = this._getPrimaryKeyValue();
+    return await ModelClass.getCounters(primaryKeyValue);
+  }
+
+  /**
+   * Create a counter for a specific field of this document
+   */
+  createFieldCounter(field: string): import("./atomic-utils.ts").AtomicCounter {
+    const ModelClass = this.constructor as ModelConstructor<T>;
+    const primaryKeyValue = this._getPrimaryKeyValue();
+    return ModelClass.createFieldCounter(primaryKeyValue, field);
+  }
 }
 
 /**
@@ -1001,14 +1043,14 @@ export function createModelClass<T = any>(
       // Process TTL if provided
       let processedOptions: { expireIn?: number } | undefined;
       if (options?.expireIn !== undefined) {
-        const expireInMs = typeof options.expireIn === "string" 
-          ? TTL.parse(options.expireIn) 
+        const expireInMs = typeof options.expireIn === "string"
+          ? TTL.parse(options.expireIn)
           : options.expireIn;
-        
+
         if (!TTL.isValid(expireInMs)) {
           throw new Error(`Invalid TTL value: ${options.expireIn}`);
         }
-        
+
         processedOptions = { expireIn: expireInMs };
       }
 
@@ -1045,17 +1087,17 @@ export function createModelClass<T = any>(
         // Process TTL if provided
         let processedOptions: { expireIn?: number } | undefined;
         if (update.options?.expireIn !== undefined) {
-          const expireInMs = typeof update.options.expireIn === "string" 
-            ? TTL.parse(update.options.expireIn) 
+          const expireInMs = typeof update.options.expireIn === "string"
+            ? TTL.parse(update.options.expireIn)
             : update.options.expireIn;
-          
+
           if (!TTL.isValid(expireInMs)) {
             throw new Error(`Invalid TTL value: ${update.options.expireIn}`);
           }
-          
+
           processedOptions = { expireIn: expireInMs };
         }
-        
+
         builder.update(this.entity, update.key, update.data, processedOptions);
       }
 
@@ -1248,6 +1290,206 @@ export function createModelClass<T = any>(
      */
     static areHooksEnabled(): boolean {
       return this.hooks.isEnabled();
+    }
+
+    // ============================================================================
+    // Atomic Utilities Methods
+    // ============================================================================
+
+    /**
+     * Get atomic utilities for this model
+     */
+    static atomicUtils(): ModelAtomicUtils {
+      return AtomicUtils.forModel(this.kv, this.entity);
+    }
+
+    /**
+     * Increment a counter field for a record atomically
+     */
+    static async incrementField(
+      recordKey: string | Record<string, any>,
+      field: string,
+      amount: number | bigint = 1,
+    ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
+      return await this.atomicUtils().incrementField(recordKey, field, amount);
+    }
+
+    /**
+     * Increment multiple counter fields atomically
+     */
+    static async incrementFields(
+      recordKey: string | Record<string, any>,
+      fields: Record<string, number | bigint>,
+    ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
+      return await this.atomicUtils().incrementFields(recordKey, fields);
+    }
+
+    /**
+     * Get all counter values for a record
+     */
+    static async getCounters(
+      recordKey: string | Record<string, any>,
+    ): Promise<Record<string, bigint>> {
+      return await this.atomicUtils().getCounters(recordKey);
+    }
+
+    /**
+     * Create a counter for a specific field
+     */
+    static createFieldCounter(
+      recordKey: string | Record<string, any>,
+      field: string,
+    ): import("./atomic-utils.ts").AtomicCounter {
+      return this.atomicUtils().createFieldCounter(recordKey, field);
+    }
+
+    /**
+     * Create a general-purpose counter
+     */
+    static createCounter(
+      key: Deno.KvKey,
+    ): import("./atomic-utils.ts").AtomicCounter {
+      return AtomicUtils.counter(this.kv, key);
+    }
+
+    // ============================================================================
+    // Advanced List Operations
+    // ============================================================================
+
+    /**
+     * Advanced list operation with range queries and cursor pagination
+     */
+    static async list(
+      options?: import("./list-operations.ts").ListOptions,
+    ): Promise<import("./model-types.ts").ModelListResult<DynamicModel & T>> {
+      const { list } = await import("./list-operations.ts");
+      const result = await list<T>(this.entity, this.kv, options);
+
+      return {
+        data: result.data.map((entry) =>
+          new this(entry.value) as DynamicModel & T
+        ),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+        count: result.count,
+      };
+    }
+
+    /**
+     * List records within a specific key range
+     */
+    static async listRange(
+      startKey: Deno.KvKey,
+      endKey: Deno.KvKey,
+      options?: Omit<
+        import("./list-operations.ts").ListOptions,
+        "start" | "end"
+      >,
+    ): Promise<import("./model-types.ts").ModelListResult<DynamicModel & T>> {
+      const { listRange } = await import("./list-operations.ts");
+      const result = await listRange<T>(
+        this.entity,
+        this.kv,
+        startKey,
+        endKey,
+        options,
+      );
+
+      return {
+        data: result.data.map((entry) =>
+          new this(entry.value) as DynamicModel & T
+        ),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+        count: result.count,
+      };
+    }
+
+    /**
+     * List records with a specific prefix
+     */
+    static async listByPrefix(
+      prefix: Deno.KvKey,
+      options?: Omit<import("./list-operations.ts").ListOptions, "prefix">,
+    ): Promise<import("./model-types.ts").ModelListResult<DynamicModel & T>> {
+      const { listByPrefix } = await import("./list-operations.ts");
+      const result = await listByPrefix<T>(
+        this.entity,
+        this.kv,
+        prefix,
+        options,
+      );
+
+      return {
+        data: result.data.map((entry) =>
+          new this(entry.value) as DynamicModel & T
+        ),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+        count: result.count,
+      };
+    }
+
+    /**
+     * List records by date range
+     */
+    static async listByDateRange(
+      options: import("./list-operations.ts").DateRangeOptions,
+    ): Promise<import("./model-types.ts").ModelListResult<DynamicModel & T>> {
+      const { listByDateRange } = await import("./list-operations.ts");
+      const result = await listByDateRange<T>(this.entity, this.kv, options);
+
+      return {
+        data: result.data.map((entry) =>
+          new this(entry.value) as DynamicModel & T
+        ),
+        nextCursor: result.nextCursor,
+        hasMore: result.hasMore,
+        count: result.count,
+      };
+    }
+
+    /**
+     * Stream results for large datasets with automatic batching
+     */
+    static async *listStream(
+      options?: import("./list-operations.ts").ListOptions,
+    ): AsyncGenerator<DynamicModel & T, void, unknown> {
+      const { listStream } = await import("./list-operations.ts");
+
+      for await (const entry of listStream<T>(this.entity, this.kv, options)) {
+        yield new this(entry.value) as DynamicModel & T;
+      }
+    }
+
+    /**
+     * Count records matching the given criteria
+     */
+    static async count(
+      options?: Omit<
+        import("./list-operations.ts").ListOptions,
+        "limit" | "cursor"
+      >,
+    ): Promise<number> {
+      const { count } = await import("./list-operations.ts");
+      return await count(this.entity, this.kv, options);
+    }
+
+    /**
+     * Get paginated results with metadata
+     */
+    static async paginate(
+      options?: import("./list-operations.ts").PaginationOptions,
+    ): Promise<import("./model-types.ts").ModelPaginatedResult<DynamicModel & T>> {
+      const { paginate } = await import("./list-operations.ts");
+      const result = await paginate<T>(this.entity, this.kv, options);
+
+      return {
+        data: result.data.map((entry) =>
+          new this(entry.value) as DynamicModel & T
+        ),
+        pagination: result.pagination,
+      };
     }
 
     // ============================================================================

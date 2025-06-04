@@ -18,7 +18,7 @@ const testEntity: KVMEntity = {
 
 Deno.test("TTL API - update with numeric TTL", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "update-ttl-numeric",
     name: "Original name",
@@ -30,21 +30,21 @@ Deno.test("TTL API - update with numeric TTL", async () => {
   await create(testEntity, kv, testData);
 
   // Update with TTL
-  const updatedResult = await update(testEntity, kv, testData.id, 
-    { name: "Updated name", counter: 2 }, 
-    { expireIn: 10000 }
-  );
-  
+  const updatedResult = await update(testEntity, kv, testData.id, {
+    name: "Updated name",
+    counter: 2,
+  }, { expireIn: 10000 });
+
   assertEquals(updatedResult?.value?.name, "Updated name");
   assertEquals(updatedResult?.value?.counter, 2);
   assertEquals((updatedResult?.value as any)?.data, "original data"); // Should preserve
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - update with string TTL", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "update-ttl-string",
     name: "Original name",
@@ -55,20 +55,19 @@ Deno.test("TTL API - update with string TTL", async () => {
   await create(testEntity, kv, testData);
 
   // Update with string TTL
-  const updatedResult = await update(testEntity, kv, testData.id, 
-    { name: "Updated with string TTL" }, 
-    { expireIn: "15m" }
-  );
-  
+  const updatedResult = await update(testEntity, kv, testData.id, {
+    name: "Updated with string TTL",
+  }, { expireIn: "15m" });
+
   assertEquals(updatedResult?.value?.name, "Updated with string TTL");
   assertEquals((updatedResult?.value as any)?.data, "original data");
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - update with various TTL formats", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testCases = [
     { expireIn: "30s", suffix: "30s" },
     { expireIn: "10m", suffix: "10m" },
@@ -87,20 +86,22 @@ Deno.test("TTL API - update with various TTL formats", async () => {
     await create(testEntity, kv, testData);
 
     // Update with TTL
-    const updatedResult = await update(testEntity, kv, testData.id, 
-      { name: `Updated with ${testCase.expireIn}` }, 
-      { expireIn: testCase.expireIn }
+    const updatedResult = await update(testEntity, kv, testData.id, {
+      name: `Updated with ${testCase.expireIn}`,
+    }, { expireIn: testCase.expireIn });
+
+    assertEquals(
+      updatedResult?.value?.name,
+      `Updated with ${testCase.expireIn}`,
     );
-    
-    assertEquals(updatedResult?.value?.name, `Updated with ${testCase.expireIn}`);
   }
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - update with invalid TTL", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "update-ttl-invalid",
     name: "Original name",
@@ -112,39 +113,39 @@ Deno.test("TTL API - update with invalid TTL", async () => {
 
   // Test invalid TTL format
   await assertRejects(
-    () => update(testEntity, kv, testData.id, 
-      { name: "Should fail" }, 
-      { expireIn: "invalid-format" }
-    ),
+    () =>
+      update(testEntity, kv, testData.id, { name: "Should fail" }, {
+        expireIn: "invalid-format",
+      }),
     Error,
-    "Invalid TTL format"
+    "Invalid TTL format",
   );
 
   // Test invalid TTL number
   await assertRejects(
-    () => update(testEntity, kv, testData.id, 
-      { name: "Should fail" }, 
-      { expireIn: -5000 }
-    ),
+    () =>
+      update(testEntity, kv, testData.id, { name: "Should fail" }, {
+        expireIn: -5000,
+      }),
     Error,
-    "Invalid TTL value"
+    "Invalid TTL value",
   );
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - update non-existent record", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   // Try to update non-existent record
   await assertRejects(
-    () => update(testEntity, kv, "non-existent", 
-      { name: "Should fail" }, 
-      { expireIn: "5m" }
-    ),
+    () =>
+      update(testEntity, kv, "non-existent", { name: "Should fail" }, {
+        expireIn: "5m",
+      }),
     Error,
-    "Record not found"
+    "Record not found",
   );
-  
+
   kv.close();
 });

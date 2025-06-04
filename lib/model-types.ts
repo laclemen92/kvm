@@ -25,6 +25,13 @@ import type {
   PostHookFunction,
   PreHookFunction,
 } from "./middleware-types.ts";
+import type {
+  DateRangeOptions,
+  ListOptions,
+  ListResult,
+  PaginatedResult,
+  PaginationOptions,
+} from "./list-operations.ts";
 
 /**
  * Model definition structure for creating new models
@@ -46,7 +53,7 @@ export type TTLValue = number | string;
  * Options for model operations
  */
 export interface CreateOptions {
-  /** 
+  /**
    * Time to live in milliseconds or human-readable format
    * Examples: 300000, "5m", "1h", "30s", "2d"
    */
@@ -54,7 +61,7 @@ export interface CreateOptions {
 }
 
 export interface UpdateOptions {
-  /** 
+  /**
    * Time to live in milliseconds or human-readable format
    * Examples: 300000, "5m", "1h", "30s", "2d"
    */
@@ -82,6 +89,17 @@ export interface ModelDocument<T = any> {
   watch(
     options?: import("./watch-types.ts").WatchOptions,
   ): Promise<import("./watch-types.ts").WatchResult<this>>;
+
+  // Atomic counter methods
+  incrementField(
+    field: string,
+    amount?: number | bigint,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
+  incrementFields(
+    fields: Record<string, number | bigint>,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
+  getCounters(): Promise<Record<string, bigint>>;
+  createFieldCounter(field: string): import("./atomic-utils.ts").AtomicCounter;
 }
 
 /**
@@ -159,6 +177,48 @@ export interface ModelStatic<T = any> {
     relation: string,
     options?: import("./watch-types.ts").WatchRelationOptions,
   ): Promise<import("./watch-types.ts").WatchResult<ModelDocument<T> & T>>;
+
+  // Atomic utilities methods
+  atomicUtils(): import("./atomic-utils.ts").ModelAtomicUtils;
+  incrementField(
+    recordKey: string | Record<string, any>,
+    field: string,
+    amount?: number | bigint,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
+  incrementFields(
+    recordKey: string | Record<string, any>,
+    fields: Record<string, number | bigint>,
+  ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
+  getCounters(
+    recordKey: string | Record<string, any>,
+  ): Promise<Record<string, bigint>>;
+  createFieldCounter(
+    recordKey: string | Record<string, any>,
+    field: string,
+  ): import("./atomic-utils.ts").AtomicCounter;
+  createCounter(key: Deno.KvKey): import("./atomic-utils.ts").AtomicCounter;
+
+  // Advanced list operations
+  list(options?: ListOptions): Promise<ModelListResult<ModelDocument<T> & T>>;
+  listRange(
+    startKey: Deno.KvKey,
+    endKey: Deno.KvKey,
+    options?: Omit<ListOptions, "start" | "end">,
+  ): Promise<ModelListResult<ModelDocument<T> & T>>;
+  listByPrefix(
+    prefix: Deno.KvKey,
+    options?: Omit<ListOptions, "prefix">,
+  ): Promise<ModelListResult<ModelDocument<T> & T>>;
+  listByDateRange(
+    options: DateRangeOptions,
+  ): Promise<ModelListResult<ModelDocument<T> & T>>;
+  listStream(
+    options?: ListOptions,
+  ): AsyncGenerator<ModelDocument<T> & T, void, unknown>;
+  count(options?: Omit<ListOptions, "limit" | "cursor">): Promise<number>;
+  paginate(
+    options?: PaginationOptions,
+  ): Promise<ModelPaginatedResult<ModelDocument<T> & T>>;
 }
 
 /**
@@ -176,3 +236,34 @@ export interface ModelConstructor<T = any> extends ModelStatic<T> {
  * Type to infer the TypeScript type from a Zod schema
  */
 export type InferModel<TSchema extends ZodObject<any>> = z.infer<TSchema>;
+
+/**
+ * Model-specific list result that contains model instances instead of raw KV entries
+ */
+export interface ModelListResult<T> {
+  /** Array of model instances */
+  data: T[];
+  /** Cursor for next page (if available) */
+  nextCursor?: string;
+  /** Whether there are more results */
+  hasMore: boolean;
+  /** Total count of results in this batch */
+  count: number;
+}
+
+/**
+ * Model-specific paginated result that contains model instances
+ */
+export interface ModelPaginatedResult<T> {
+  /** Current page data */
+  data: T[];
+  /** Pagination metadata */
+  pagination: {
+    page: number;
+    pageSize: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    nextCursor?: string;
+    totalInBatch: number;
+  };
+}

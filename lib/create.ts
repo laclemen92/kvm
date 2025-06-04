@@ -37,14 +37,14 @@ export const create = async <T = unknown>(
   // Process TTL value if provided
   let processedOptions = options;
   if (options?.expireIn !== undefined) {
-    const expireInMs = typeof options.expireIn === "string" 
-      ? TTL.parse(options.expireIn) 
+    const expireInMs = typeof options.expireIn === "string"
+      ? TTL.parse(options.expireIn)
       : options.expireIn;
-    
+
     if (!TTL.isValid(expireInMs)) {
       throw new Error(`Invalid TTL value: ${options.expireIn}`);
     }
-    
+
     processedOptions = { ...options, expireIn: expireInMs };
   }
 
@@ -93,7 +93,11 @@ export const create = async <T = unknown>(
 
           checks.push({ key: relationKey, versionstamp: null });
           if (relation.valueType === ValueType.KEY && relation.valueKey) {
-            sets.push({ key: relationKey, value: value[relation.valueKey], options: processedOptions });
+            sets.push({
+              key: relationKey,
+              value: value[relation.valueKey],
+              options: processedOptions,
+            });
           } else {
             sets.push({ key: relationKey, value, options: processedOptions });
           }

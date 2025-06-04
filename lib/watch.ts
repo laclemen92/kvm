@@ -338,19 +338,22 @@ export class WatchManager {
     if (state) {
       state.active = false;
       state.abortController?.abort();
-      
+
       // Only close if controller exists and stream isn't already closed
       if (state.controller) {
         try {
           state.controller.close();
         } catch (error) {
           // Ignore error if stream is already closed
-          if (!(error instanceof TypeError && error.message.includes("cannot close or enqueue"))) {
+          if (
+            !(error instanceof TypeError &&
+              error.message.includes("cannot close or enqueue"))
+          ) {
             throw error;
           }
         }
       }
-      
+
       this.activeWatches.delete(watchId);
     }
   }

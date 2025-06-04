@@ -16,7 +16,7 @@ const testEntity: KVMEntity = {
 
 Deno.test("TTL API - create with numeric TTL", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "ttl-numeric",
     name: "Test with numeric TTL",
@@ -25,16 +25,16 @@ Deno.test("TTL API - create with numeric TTL", async () => {
 
   // Create with 5 second TTL
   const result = await create(testEntity, kv, testData, { expireIn: 5000 });
-  
+
   assertEquals(result?.value?.id, testData.id);
   assertEquals(result?.value?.name, testData.name);
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - create with string TTL", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "ttl-string",
     name: "Test with string TTL",
@@ -43,16 +43,16 @@ Deno.test("TTL API - create with string TTL", async () => {
 
   // Create with 5 minute TTL
   const result = await create(testEntity, kv, testData, { expireIn: "5m" });
-  
+
   assertEquals(result?.value?.id, testData.id);
   assertEquals(result?.value?.name, testData.name);
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - create with various string formats", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testCases = [
     { expireIn: "30s", id: "ttl-seconds" },
     { expireIn: "5m", id: "ttl-minutes" },
@@ -69,16 +69,18 @@ Deno.test("TTL API - create with various string formats", async () => {
       data: "some data",
     };
 
-    const result = await create(testEntity, kv, testData, { expireIn: testCase.expireIn });
+    const result = await create(testEntity, kv, testData, {
+      expireIn: testCase.expireIn,
+    });
     assertEquals(result?.value?.id, testData.id);
   }
-  
+
   kv.close();
 });
 
 Deno.test("TTL API - create with invalid TTL string", async () => {
   const kv = await Deno.openKv(":memory:");
-  
+
   const testData = {
     id: "ttl-invalid",
     name: "Test with invalid TTL",
@@ -89,16 +91,16 @@ Deno.test("TTL API - create with invalid TTL string", async () => {
   await assertRejects(
     () => create(testEntity, kv, testData, { expireIn: "invalid" }),
     Error,
-    "Invalid TTL format"
+    "Invalid TTL format",
   );
 
   // Test invalid number
   await assertRejects(
     () => create(testEntity, kv, testData, { expireIn: -1000 }),
     Error,
-    "Invalid TTL value"
+    "Invalid TTL value",
   );
-  
+
   kv.close();
 });
 
