@@ -1,12 +1,12 @@
 import type { KVMEntity } from "./types.ts";
 import type { ZodRawShape } from "zod";
 import type {
+  SSEOptions,
+  WatchCallback,
   WatchEvent,
   WatchEventType,
   WatchOptions,
   WatchState,
-  WatchCallback,
-  SSEOptions,
   WebSocketOptions,
 } from "./watch-types.ts";
 import { WatchEventType as EventType } from "./watch-types.ts";
@@ -49,15 +49,21 @@ export class WatchUtils {
     if (isInitial) {
       return EventType.INITIAL;
     }
-    
-    if (previousValue === null && currentValue !== null) {
+
+    // Normalize undefined to null for comparison
+    const normalizedCurrent = currentValue === undefined ? null : currentValue;
+    const normalizedPrevious = previousValue === undefined
+      ? null
+      : previousValue;
+
+    if (normalizedPrevious === null && normalizedCurrent !== null) {
       return EventType.CREATED;
     }
-    
-    if (previousValue !== null && currentValue === null) {
+
+    if (normalizedPrevious !== null && normalizedCurrent === null) {
       return EventType.DELETED;
     }
-    
+
     return EventType.UPDATED;
   }
 
@@ -70,7 +76,19 @@ export class WatchUtils {
   ): Deno.KvKey {
     if (typeof id === "string") {
       // Simple primary key
-      return buildPrimaryKey(entity.primaryKey, { [entity.primaryKey[0].key || "id"]: id });
+      const primaryKeyDef = entity.primaryKey[0];
+      if (!primaryKeyDef.key) {
+        // No key field, build manually for watch case
+        const primaryKey: Deno.KvKeyPart[] = [];
+        entity.primaryKey.forEach((keyPart) => {
+          if (keyPart.name) {
+            primaryKey.push(keyPart.name);
+          }
+        });
+        primaryKey.push(id);
+        return primaryKey;
+      }
+      return buildPrimaryKey(entity.primaryKey, { [primaryKeyDef.key]: id });
     } else {
       // Composite primary key
       return buildPrimaryKey(entity.primaryKey, id);
@@ -84,7 +102,7 @@ export class WatchUtils {
     entity: KVMEntity<T>,
     ids: (string | Record<string, any>)[],
   ): Deno.KvKey[] {
-    return ids.map(id => this.generateWatchKey(entity, id));
+    return ids.map((id) => this.generateWatchKey(entity, id));
   }
 
   /**
@@ -116,14 +134,14 @@ export class WatchUtils {
           }, heartbeatInterval);
         }
       },
-      
+
       async pull(controller) {
         const reader = stream.getReader();
-        
+
         try {
           while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) {
               break;
             }
@@ -132,7 +150,9 @@ export class WatchUtils {
             if (serializer) {
               data = serializer(value);
             } else {
-              const eventData = includeMetadata ? value : { value: value.value, type: value.type };
+              const eventData = includeMetadata
+                ? value
+                : { value: value.value, type: value.type };
               data = JSON.stringify(eventData);
             }
 
@@ -225,7 +245,7 @@ export class WatchUtils {
         try {
           while (socket.readyState === WebSocket.OPEN) {
             const { done, value } = await streamReader.read();
-            
+
             if (done) {
               break;
             }
@@ -234,7 +254,9 @@ export class WatchUtils {
             if (serializer) {
               data = serializer(value);
             } else {
-              const eventData = includeMetadata ? value : { value: value.value, type: value.type };
+              const eventData = includeMetadata
+                ? value
+                : { value: value.value, type: value.type };
               data = JSON.stringify({ type: messageType, data: eventData });
             }
 
@@ -256,8 +278,8 @@ export class WatchUtils {
   ): ReadableStream<WatchEvent<T>> {
     return new ReadableStream({
       start(controller) {
-        const readers = streams.map(stream => stream.getReader());
-        
+        const readers = streams.map((stream) => stream.getReader());
+
         const readFromAll = async () => {
           const promises = readers.map(async (reader, index) => {
             try {
@@ -303,12 +325,12 @@ export class WatchUtils {
     return new ReadableStream({
       start(controller) {
         const reader = stream.getReader();
-        
+
         const processStream = async () => {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              
+
               if (done) {
                 controller.close();
                 break;
@@ -340,12 +362,12 @@ export class WatchUtils {
     return new ReadableStream({
       start(controller) {
         const reader = stream.getReader();
-        
+
         const processStream = async () => {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              
+
               if (done) {
                 controller.close();
                 break;
@@ -378,12 +400,12 @@ export class WatchUtils {
         const reader = stream.getReader();
         let timeout: number | undefined;
         let lastEvent: WatchEvent<T> | undefined;
-        
+
         const processStream = async () => {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              
+
               if (done) {
                 if (lastEvent) {
                   controller.enqueue(lastEvent);
@@ -393,11 +415,11 @@ export class WatchUtils {
               }
 
               lastEvent = value;
-              
+
               if (timeout) {
                 clearTimeout(timeout);
               }
-              
+
               timeout = setTimeout(() => {
                 if (lastEvent) {
                   controller.enqueue(lastEvent);

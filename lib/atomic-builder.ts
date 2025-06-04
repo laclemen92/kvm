@@ -21,7 +21,11 @@ import {
 import { buildPrimaryKey } from "./utils.ts";
 import { findUnique } from "./find.ts";
 import { ValueType } from "./types.ts";
-import { KVMErrorUtils, KVMOperationError, KVMValidationError } from "./errors.ts";
+import {
+  KVMErrorUtils,
+  KVMOperationError,
+  KVMValidationError,
+} from "./errors.ts";
 
 /**
  * Default atomic transaction options
@@ -258,7 +262,8 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
       failedMutation: {
         index: -1,
         mutation: {} as AtomicMutation,
-        error: lastError || new KVMOperationError("commit", "Unknown atomic transaction error"),
+        error: lastError ||
+          new KVMOperationError("commit", "Unknown atomic transaction error"),
       },
     };
   }
@@ -352,7 +357,11 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     }
 
     // Check if record exists
-    const existing = await findUnique(mutation.entity, this.kv, mutation.key as any);
+    const existing = await findUnique(
+      mutation.entity,
+      this.kv,
+      mutation.key as any,
+    );
     if (!existing || !existing.value) {
       throw new Error(
         `Record not found with key: ${JSON.stringify(mutation.key)}`,
@@ -382,7 +391,11 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     }
 
     // Check if record exists
-    const existing = await findUnique(mutation.entity, this.kv, mutation.key as any);
+    const existing = await findUnique(
+      mutation.entity,
+      this.kv,
+      mutation.key as any,
+    );
     if (!existing || !existing.value) {
       throw new Error(
         `Record not found with key: ${JSON.stringify(mutation.key)}`,
@@ -452,7 +465,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
 
     return {
       ok: result.ok,
-      versionstamp: 'versionstamp' in result ? result.versionstamp : undefined,
+      versionstamp: "versionstamp" in result ? result.versionstamp : undefined,
       mutations: this.mutations,
     };
   }

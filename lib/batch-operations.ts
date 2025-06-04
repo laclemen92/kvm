@@ -666,7 +666,10 @@ export async function deleteMany<T>(
             entity,
             kv,
             deleteItem.key,
-            { cascadeDelete: deleteItem.options?.cascadeDelete ?? cascadeDelete ?? false },
+            {
+              cascadeDelete: deleteItem.options?.cascadeDelete ??
+                cascadeDelete ?? false,
+            },
           );
 
           if (deleted) {

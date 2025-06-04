@@ -98,7 +98,12 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       }
 
       // Execute post-save hooks
-      await ModelClass.hooks.executePostHooks("save", context, result, this as any);
+      await ModelClass.hooks.executePostHooks(
+        "save",
+        context,
+        result,
+        this as any,
+      );
 
       return this;
     } catch (error) {
@@ -135,7 +140,12 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       );
 
       // Execute post-delete hooks
-      await ModelClass.hooks.executePostHooks("delete", context, true, this as any);
+      await ModelClass.hooks.executePostHooks(
+        "delete",
+        context,
+        true,
+        this as any,
+      );
     } catch (error) {
       throw KVMErrorUtils.wrap(error as Error, "delete", ModelClass.modelName);
     }
@@ -164,7 +174,12 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       const result = await this.save(options);
 
       // Execute post-update hooks
-      await ModelClass.hooks.executePostHooks("update", context, result, this as any);
+      await ModelClass.hooks.executePostHooks(
+        "update",
+        context,
+        result,
+        this as any,
+      );
 
       return result;
     } catch (error) {
@@ -470,33 +485,44 @@ export class BaseModel<T = any> implements ModelDocument<T> {
   ): Promise<import("./watch-types.ts").WatchResult<any>> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
-    
+
     const { watchRecord } = await import("./watch.ts");
-    const result = await watchRecord(ModelClass.entity, ModelClass.kv, primaryKeyValue, options);
-    
+    const result = await watchRecord(
+      ModelClass.entity,
+      ModelClass.kv,
+      primaryKeyValue,
+      options,
+    );
+
     // Transform the stream to return model instances
     const originalStream = result.stream;
-    const modelStream = new ReadableStream({
+    const modelStream = new ReadableStream<
+      import("./watch-types.ts").WatchEvent<any>
+    >({
       start(controller) {
         const reader = originalStream.getReader();
-        
+
         const processStream = async () => {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              
+
               if (done) {
                 controller.close();
                 break;
               }
 
               // Transform the event to include model instance
-              const transformedEvent = {
+              const transformedEvent: import("./watch-types.ts").WatchEvent<
+                any
+              > = {
                 ...value,
                 value: value.value ? new ModelClass(value.value as any) : null,
-                previousValue: value.previousValue ? new ModelClass(value.previousValue as any) : null,
+                previousValue: value.previousValue
+                  ? new ModelClass(value.previousValue as any)
+                  : null,
               };
-              
+
               controller.enqueue(transformedEvent);
             }
           } catch (error) {
@@ -511,8 +537,12 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     });
 
     return {
-      ...result,
       stream: modelStream,
+      stop: result.stop,
+      on: (callback: import("./watch-types.ts").WatchCallback<any>) =>
+        result.on(callback as any),
+      toSSE: result.toSSE,
+      toWebSocket: result.toWebSocket,
     };
   }
 }
@@ -1204,30 +1234,40 @@ export function createModelClass<T = any>(
     ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
       const { watchRecord } = await import("./watch.ts");
       const result = await watchRecord(this.entity, this.kv, id, options);
-      
+
       // Transform the stream to return model instances
       const originalStream = result.stream;
-      const modelStream = new ReadableStream({
+      const modelStream = new ReadableStream<
+        import("./watch-types.ts").WatchEvent<DynamicModel & T>
+      >({
         start(controller) {
           const reader = originalStream.getReader();
-          
+
           const processStream = async () => {
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                
+
                 if (done) {
                   controller.close();
                   break;
                 }
 
                 // Transform the event to include model instance
-                const transformedEvent = {
+                const transformedEvent: import("./watch-types.ts").WatchEvent<
+                  DynamicModel & T
+                > = {
                   ...value,
-                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
-                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                  value: value.value
+                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    : null,
+                  previousValue: value.previousValue
+                    ? new DynamicModel(value.previousValue as any) as
+                      & DynamicModel
+                      & T
+                    : null,
                 };
-                
+
                 controller.enqueue(transformedEvent);
               }
             } catch (error) {
@@ -1242,8 +1282,13 @@ export function createModelClass<T = any>(
       });
 
       return {
-        ...result,
         stream: modelStream,
+        stop: result.stop,
+        on: (
+          callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
+        ) => result.on(callback as any),
+        toSSE: result.toSSE,
+        toWebSocket: result.toWebSocket,
       };
     }
 
@@ -1256,30 +1301,40 @@ export function createModelClass<T = any>(
     ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
       const { watchRecords } = await import("./watch.ts");
       const result = await watchRecords(this.entity, this.kv, ids, options);
-      
+
       // Transform the stream to return model instances
       const originalStream = result.stream;
-      const modelStream = new ReadableStream({
+      const modelStream = new ReadableStream<
+        import("./watch-types.ts").WatchEvent<DynamicModel & T>
+      >({
         start(controller) {
           const reader = originalStream.getReader();
-          
+
           const processStream = async () => {
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                
+
                 if (done) {
                   controller.close();
                   break;
                 }
 
                 // Transform the event to include model instance
-                const transformedEvent = {
+                const transformedEvent: import("./watch-types.ts").WatchEvent<
+                  DynamicModel & T
+                > = {
                   ...value,
-                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
-                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                  value: value.value
+                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    : null,
+                  previousValue: value.previousValue
+                    ? new DynamicModel(value.previousValue as any) as
+                      & DynamicModel
+                      & T
+                    : null,
                 };
-                
+
                 controller.enqueue(transformedEvent);
               }
             } catch (error) {
@@ -1294,8 +1349,13 @@ export function createModelClass<T = any>(
       });
 
       return {
-        ...result,
         stream: modelStream,
+        stop: result.stop,
+        on: (
+          callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
+        ) => result.on(callback as any),
+        toSSE: result.toSSE,
+        toWebSocket: result.toWebSocket,
       };
     }
 
@@ -1307,30 +1367,40 @@ export function createModelClass<T = any>(
     ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
       const { watchQuery } = await import("./watch.ts");
       const result = await watchQuery(this.entity, this.kv, options);
-      
+
       // Transform the stream to return model instances
       const originalStream = result.stream;
-      const modelStream = new ReadableStream({
+      const modelStream = new ReadableStream<
+        import("./watch-types.ts").WatchEvent<DynamicModel & T>
+      >({
         start(controller) {
           const reader = originalStream.getReader();
-          
+
           const processStream = async () => {
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                
+
                 if (done) {
                   controller.close();
                   break;
                 }
 
                 // Transform the event to include model instance
-                const transformedEvent = {
+                const transformedEvent: import("./watch-types.ts").WatchEvent<
+                  DynamicModel & T
+                > = {
                   ...value,
-                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
-                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                  value: value.value
+                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    : null,
+                  previousValue: value.previousValue
+                    ? new DynamicModel(value.previousValue as any) as
+                      & DynamicModel
+                      & T
+                    : null,
                 };
-                
+
                 controller.enqueue(transformedEvent);
               }
             } catch (error) {
@@ -1345,8 +1415,13 @@ export function createModelClass<T = any>(
       });
 
       return {
-        ...result,
         stream: modelStream,
+        stop: result.stop,
+        on: (
+          callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
+        ) => result.on(callback as any),
+        toSSE: result.toSSE,
+        toWebSocket: result.toWebSocket,
       };
     }
 
@@ -1356,39 +1431,52 @@ export function createModelClass<T = any>(
     static async watchRelations(
       id: string,
       relationName: string,
-      options?: Omit<import("./watch-types.ts").WatchRelationOptions, 'relation'>,
+      options?: Omit<
+        import("./watch-types.ts").WatchRelationOptions,
+        "relation"
+      >,
     ): Promise<import("./watch-types.ts").WatchResult<DynamicModel & T>> {
       const { WatchManager } = await import("./watch.ts");
       const manager = new WatchManager(this.kv);
-      
+
       const result = await manager.watchRelations(this.entity, id, {
         ...options,
         relation: relationName,
       });
-      
+
       // Transform the stream to return model instances
       const originalStream = result.stream;
-      const modelStream = new ReadableStream({
+      const modelStream = new ReadableStream<
+        import("./watch-types.ts").WatchEvent<DynamicModel & T>
+      >({
         start(controller) {
           const reader = originalStream.getReader();
-          
+
           const processStream = async () => {
             try {
               while (true) {
                 const { done, value } = await reader.read();
-                
+
                 if (done) {
                   controller.close();
                   break;
                 }
 
                 // Transform the event to include model instance
-                const transformedEvent = {
+                const transformedEvent: import("./watch-types.ts").WatchEvent<
+                  DynamicModel & T
+                > = {
                   ...value,
-                  value: value.value ? new DynamicModel(value.value as any) as DynamicModel & T : null,
-                  previousValue: value.previousValue ? new DynamicModel(value.previousValue as any) as DynamicModel & T : null,
+                  value: value.value
+                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    : null,
+                  previousValue: value.previousValue
+                    ? new DynamicModel(value.previousValue as any) as
+                      & DynamicModel
+                      & T
+                    : null,
                 };
-                
+
                 controller.enqueue(transformedEvent);
               }
             } catch (error) {
@@ -1403,8 +1491,13 @@ export function createModelClass<T = any>(
       });
 
       return {
-        ...result,
         stream: modelStream,
+        stop: result.stop,
+        on: (
+          callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
+        ) => result.on(callback as any),
+        toSSE: result.toSSE,
+        toWebSocket: result.toWebSocket,
       };
     }
   }

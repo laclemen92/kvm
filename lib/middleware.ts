@@ -75,7 +75,9 @@ export class KVMHookManager<T = any> implements HookManager<T> {
     this.hooks.push(hook);
 
     // Sort hooks by priority (higher priority first)
-    this.hooks.sort((a, b) => (b.options.priority || 0) - (a.options.priority || 0));
+    this.hooks.sort((a, b) =>
+      (b.options.priority || 0) - (a.options.priority || 0)
+    );
   }
 
   /**

@@ -234,10 +234,10 @@ export type {
 export {
   getWatchManager,
   initializeWatchManager,
+  WatchManager,
   watchQuery,
   watchRecord,
   watchRecords,
-  WatchManager,
 } from "./lib/watch.ts";
 export { WatchUtils } from "./lib/watch-utils.ts";
 

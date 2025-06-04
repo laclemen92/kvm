@@ -62,7 +62,7 @@ export type WatchEvent<T = any> = {
  */
 export enum WatchEventType {
   CREATED = "created",
-  UPDATED = "updated", 
+  UPDATED = "updated",
   DELETED = "deleted",
   INITIAL = "initial", // Initial value when starting to watch
 }
@@ -105,7 +105,9 @@ export type WebSocketOptions = {
 /**
  * Function type for watch event callbacks
  */
-export type WatchCallback<T = any> = (event: WatchEvent<T>) => void | Promise<void>;
+export type WatchCallback<T = any> = (
+  event: WatchEvent<T>,
+) => void | Promise<void>;
 
 /**
  * Watch result that includes both stream and control methods

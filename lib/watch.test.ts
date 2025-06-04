@@ -1,6 +1,14 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.218.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.218.0/assert/mod.ts";
 import { z } from "zod";
-import { WatchManager, watchRecord, watchRecords, watchQuery } from "./watch.ts";
+import {
+  WatchManager,
+  watchQuery,
+  watchRecord,
+  watchRecords,
+} from "./watch.ts";
 import { WatchEventType } from "./watch-types.ts";
 import { WatchUtils } from "./watch-utils.ts";
 import type { KVMEntity } from "./types.ts";
@@ -45,7 +53,12 @@ Deno.test("WatchManager - watch single record", async () => {
     // Create initial user
     const userId = "user1";
     const userKey = buildPrimaryKey(userEntity.primaryKey, { id: userId });
-    await kv.set(userKey, { id: userId, name: "John", email: "john@example.com", age: 30 });
+    await kv.set(userKey, {
+      id: userId,
+      name: "John",
+      email: "john@example.com",
+      age: 30,
+    });
 
     // Start watching
     const watchResult = await manager.watch(userEntity, userId);
@@ -71,18 +84,23 @@ Deno.test("WatchManager - watch single record", async () => {
     const readPromise = readEvents();
 
     // Give some time for initial event
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Update the user
-    await kv.set(userKey, { id: userId, name: "John Doe", email: "john@example.com", age: 31 });
-    
+    await kv.set(userKey, {
+      id: userId,
+      name: "John Doe",
+      email: "john@example.com",
+      age: 31,
+    });
+
     // Wait for events
     await readPromise;
     watchResult.stop();
 
     // Verify events - we should get at least initial event
     assertEquals(events.length >= 1, true);
-    
+
     // Initial event
     assertEquals(events[0].type, WatchEventType.INITIAL);
     assertEquals(events[0].value.name, "John");
@@ -92,7 +110,12 @@ Deno.test("WatchManager - watch single record", async () => {
     if (events.length > 1) {
       // The second event should be an update, but due to timing, we might get the final state
       const lastEvent = events[events.length - 1];
-      assertEquals([WatchEventType.UPDATED, WatchEventType.INITIAL].includes(lastEvent.type), true);
+      assertEquals(
+        [WatchEventType.UPDATED, WatchEventType.INITIAL].includes(
+          lastEvent.type,
+        ),
+        true,
+      );
       // Just verify we got some change
       assertEquals(typeof lastEvent.value.name, "string");
     }
@@ -109,15 +132,15 @@ Deno.test("WatchManager - watch multiple records", async () => {
 
   try {
     const userIds = ["user1", "user2"];
-    
+
     // Create initial users
     for (const userId of userIds) {
       const userKey = buildPrimaryKey(userEntity.primaryKey, { id: userId });
-      await kv.set(userKey, { 
-        id: userId, 
-        name: `User ${userId}`, 
-        email: `${userId}@example.com`, 
-        age: 25 
+      await kv.set(userKey, {
+        id: userId,
+        name: `User ${userId}`,
+        email: `${userId}@example.com`,
+        age: 25,
       });
     }
 
@@ -146,9 +169,9 @@ Deno.test("WatchManager - watch multiple records", async () => {
 
     // Verify we got initial events for both users
     assertEquals(events.length, 2);
-    assertEquals(events.every(e => e.type === WatchEventType.INITIAL), true);
-    assertEquals(events.some(e => e.value.id === "user1"), true);
-    assertEquals(events.some(e => e.value.id === "user2"), true);
+    assertEquals(events.every((e) => e.type === WatchEventType.INITIAL), true);
+    assertEquals(events.some((e) => e.value.id === "user1"), true);
+    assertEquals(events.some((e) => e.value.id === "user2"), true);
   } finally {
     await kv.close();
   }
@@ -161,9 +184,14 @@ Deno.test("WatchManager - watch with callback", async () => {
   try {
     const userId = "user1";
     const userKey = buildPrimaryKey(userEntity.primaryKey, { id: userId });
-    
+
     // Create initial user
-    await kv.set(userKey, { id: userId, name: "John", email: "john@example.com", age: 30 });
+    await kv.set(userKey, {
+      id: userId,
+      name: "John",
+      email: "john@example.com",
+      age: 30,
+    });
 
     // Start watching with callback
     const watchResult = await manager.watch(userEntity, userId);
@@ -174,13 +202,18 @@ Deno.test("WatchManager - watch with callback", async () => {
     });
 
     // Give time for initial event
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Update user
-    await kv.set(userKey, { id: userId, name: "John Updated", email: "john@example.com", age: 31 });
-    
+    await kv.set(userKey, {
+      id: userId,
+      name: "John Updated",
+      email: "john@example.com",
+      age: 31,
+    });
+
     // Give time for update event
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     unsubscribe();
     watchResult.stop();
@@ -188,7 +221,7 @@ Deno.test("WatchManager - watch with callback", async () => {
     // Verify callback received events
     assertEquals(callbackEvents.length >= 1, true);
     // Just verify we got some events - type can vary due to timing
-    assertEquals(callbackEvents.every(e => e.modelName === "users"), true);
+    assertEquals(callbackEvents.every((e) => e.modelName === "users"), true);
   } finally {
     await kv.close();
   }
@@ -201,11 +234,11 @@ Deno.test("WatchManager - key limit validation", async () => {
   try {
     // Try to watch more than 10 keys (Deno KV limit)
     const manyIds = Array.from({ length: 11 }, (_, i) => `user${i}`);
-    
+
     await assertRejects(
       () => manager.watchMany(userEntity, manyIds),
       Error,
-      "Cannot watch more than 10 keys at once"
+      "Cannot watch more than 10 keys at once",
     );
   } finally {
     await kv.close();
@@ -233,25 +266,28 @@ Deno.test("WatchUtils - determineEventType", () => {
   // Initial
   assertEquals(
     WatchUtils.determineEventType(null, null, true),
-    WatchEventType.INITIAL
+    WatchEventType.INITIAL,
   );
 
   // Created
   assertEquals(
     WatchUtils.determineEventType({ id: "1" }, null),
-    WatchEventType.CREATED
+    WatchEventType.CREATED,
   );
 
   // Updated
   assertEquals(
-    WatchUtils.determineEventType({ id: "1", name: "new" }, { id: "1", name: "old" }),
-    WatchEventType.UPDATED
+    WatchUtils.determineEventType({ id: "1", name: "new" }, {
+      id: "1",
+      name: "old",
+    }),
+    WatchEventType.UPDATED,
   );
 
   // Deleted
   assertEquals(
     WatchUtils.determineEventType(null, { id: "1" }),
-    WatchEventType.DELETED
+    WatchEventType.DELETED,
   );
 });
 
@@ -265,26 +301,45 @@ Deno.test("WatchUtils - generateWatchKey", () => {
 
 Deno.test("WatchUtils - filterStream", async () => {
   const sourceEvents = [
-    WatchUtils.createEvent(WatchEventType.CREATED, ["users", "1"], { id: "1", age: 25 }, "1", "users"),
-    WatchUtils.createEvent(WatchEventType.UPDATED, ["users", "2"], { id: "2", age: 30 }, "2", "users"),
-    WatchUtils.createEvent(WatchEventType.DELETED, ["users", "3"], null, "3", "users"),
+    WatchUtils.createEvent(
+      WatchEventType.CREATED,
+      ["users", "1"],
+      { id: "1", age: 25 },
+      "1",
+      "users",
+    ),
+    WatchUtils.createEvent(
+      WatchEventType.UPDATED,
+      ["users", "2"],
+      { id: "2", age: 30 },
+      "2",
+      "users",
+    ),
+    WatchUtils.createEvent(
+      WatchEventType.DELETED,
+      ["users", "3"],
+      null,
+      "3",
+      "users",
+    ),
   ];
 
   const sourceStream = new ReadableStream({
     start(controller) {
-      sourceEvents.forEach(event => controller.enqueue(event));
+      sourceEvents.forEach((event) => controller.enqueue(event));
       controller.close();
-    }
+    },
   });
 
   // Filter for only CREATED and UPDATED events
-  const filteredStream = WatchUtils.filterStream(sourceStream, (event) => 
-    event.type !== WatchEventType.DELETED
+  const filteredStream = WatchUtils.filterStream(
+    sourceStream,
+    (event) => event.type !== WatchEventType.DELETED,
   );
 
   const events = [];
   const reader = filteredStream.getReader();
-  
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -302,9 +357,27 @@ Deno.test("WatchUtils - filterStream", async () => {
 
 Deno.test("WatchUtils - debounceStream", async () => {
   const sourceEvents = [
-    WatchUtils.createEvent(WatchEventType.UPDATED, ["users", "1"], { id: "1", name: "v1" }, "1", "users"),
-    WatchUtils.createEvent(WatchEventType.UPDATED, ["users", "1"], { id: "1", name: "v2" }, "2", "users"),
-    WatchUtils.createEvent(WatchEventType.UPDATED, ["users", "1"], { id: "1", name: "v3" }, "3", "users"),
+    WatchUtils.createEvent(
+      WatchEventType.UPDATED,
+      ["users", "1"],
+      { id: "1", name: "v1" },
+      "1",
+      "users",
+    ),
+    WatchUtils.createEvent(
+      WatchEventType.UPDATED,
+      ["users", "1"],
+      { id: "1", name: "v2" },
+      "2",
+      "users",
+    ),
+    WatchUtils.createEvent(
+      WatchEventType.UPDATED,
+      ["users", "1"],
+      { id: "1", name: "v3" },
+      "3",
+      "users",
+    ),
   ];
 
   const sourceStream = new ReadableStream({
@@ -314,13 +387,13 @@ Deno.test("WatchUtils - debounceStream", async () => {
         setTimeout(() => controller.enqueue(event), index * 10);
       });
       setTimeout(() => controller.close(), 200);
-    }
+    },
   });
 
   const debouncedStream = WatchUtils.debounceStream(sourceStream, 50);
   const events = [];
   const reader = debouncedStream.getReader();
-  
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -342,12 +415,19 @@ Deno.test("functional API - watchRecord", async () => {
   try {
     const userId = "user1";
     const userKey = buildPrimaryKey(userEntity.primaryKey, { id: userId });
-    
+
     // Create user
-    await kv.set(userKey, { id: userId, name: "John", email: "john@example.com", age: 30 });
+    await kv.set(userKey, {
+      id: userId,
+      name: "John",
+      email: "john@example.com",
+      age: 30,
+    });
 
     // Watch using functional API
-    const watchResult = await watchRecord(userEntity, kv, userId, { includeDeleted: true });
+    const watchResult = await watchRecord(userEntity, kv, userId, {
+      includeDeleted: true,
+    });
     const events: any[] = [];
 
     const reader = watchResult.stream.getReader();
@@ -368,7 +448,7 @@ Deno.test("functional API - watchRecord", async () => {
     const readPromise = readEvents();
 
     // Give time for initial event
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Delete user
     await kv.delete(userKey);
@@ -379,13 +459,17 @@ Deno.test("functional API - watchRecord", async () => {
     // Should get initial and delete events
     assertEquals(events.length >= 1, true);
     assertEquals(events[0].type, WatchEventType.INITIAL);
-    
+
     // Check for delete event if we got one
     if (events.length > 1) {
       // Due to timing, we might get different event types
-      const hasDeleteEvent = events.some(e => e.type === WatchEventType.DELETED);
+      const hasDeleteEvent = events.some((e) =>
+        e.type === WatchEventType.DELETED
+      );
       if (hasDeleteEvent) {
-        const deleteEvent = events.find(e => e.type === WatchEventType.DELETED);
+        const deleteEvent = events.find((e) =>
+          e.type === WatchEventType.DELETED
+        );
         assertEquals(deleteEvent?.value, null);
       }
     }
@@ -417,7 +501,7 @@ Deno.test("functional API - watchQuery", async () => {
 
     const events: any[] = [];
     const reader = watchResult.stream.getReader();
-    
+
     const readEvents = async () => {
       try {
         while (events.length < 2) {
@@ -437,7 +521,7 @@ Deno.test("functional API - watchQuery", async () => {
 
     // Should get initial events for both users
     assertEquals(events.length, 2);
-    assertEquals(events.every(e => e.type === WatchEventType.INITIAL), true);
+    assertEquals(events.every((e) => e.type === WatchEventType.INITIAL), true);
   } finally {
     await kv.close();
   }
@@ -445,14 +529,20 @@ Deno.test("functional API - watchQuery", async () => {
 
 Deno.test("SSE Response creation", async () => {
   const events = [
-    WatchUtils.createEvent(WatchEventType.CREATED, ["users", "1"], { id: "1", name: "John" }, "1", "users"),
+    WatchUtils.createEvent(
+      WatchEventType.CREATED,
+      ["users", "1"],
+      { id: "1", name: "John" },
+      "1",
+      "users",
+    ),
   ];
 
   const stream = new ReadableStream({
     start(controller) {
-      events.forEach(event => controller.enqueue(event));
+      events.forEach((event) => controller.enqueue(event));
       controller.close();
-    }
+    },
   });
 
   const response = WatchUtils.createSSEResponse(stream, {
@@ -464,7 +554,7 @@ Deno.test("SSE Response creation", async () => {
   assertEquals(response.headers.get("Content-Type"), "text/event-stream");
   assertEquals(response.headers.get("Cache-Control"), "no-cache");
   assertEquals(response.headers.get("Connection"), "keep-alive");
-  
+
   // Clean up the response stream to prevent leaks
   const reader = response.body?.getReader();
   if (reader) {
@@ -475,14 +565,20 @@ Deno.test("SSE Response creation", async () => {
 
 Deno.test("WebSocket handler creation", async () => {
   const events = [
-    WatchUtils.createEvent(WatchEventType.CREATED, ["users", "1"], { id: "1", name: "John" }, "1", "users"),
+    WatchUtils.createEvent(
+      WatchEventType.CREATED,
+      ["users", "1"],
+      { id: "1", name: "John" },
+      "1",
+      "users",
+    ),
   ];
 
   const stream = new ReadableStream({
     start(controller) {
-      events.forEach(event => controller.enqueue(event));
+      events.forEach((event) => controller.enqueue(event));
       controller.close();
-    }
+    },
   });
 
   const handler = WatchUtils.createWebSocketHandler(stream, {

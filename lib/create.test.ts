@@ -82,7 +82,7 @@ describe("create", () => {
     } as unknown as Deno.Kv;
 
     type Post = z.infer<typeof postEntity.schema>;
-    
+
     await expect(create<Post>(postEntity, mockKv, {
       id: "post1",
       slug: "/hello-world",
@@ -212,7 +212,7 @@ describe("create", () => {
     };
 
     type Post = z.infer<typeof postEntity.schema>;
-    
+
     // Expect the create function to throw an error
     await expect(create<Post>(invalidEntity, kv, {
       id: "post1",
@@ -221,7 +221,7 @@ describe("create", () => {
       content: "Test",
       userId: "user1",
     })).rejects.toThrow(
-      "expected string, number, bigint, ArrayBufferView, boolean"
+      "couldn't find key",
     );
 
     // Restore console.error

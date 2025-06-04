@@ -65,6 +65,9 @@ export interface ModelDocument<T = any> {
   reload(): Promise<this>;
   populate(path: string | PopulateOptions): Promise<this>;
   populate(paths: (string | PopulateOptions)[]): Promise<this>;
+  watch(
+    options?: import("./watch-types.ts").WatchOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<this>>;
 }
 
 /**
@@ -124,6 +127,24 @@ export interface ModelStatic<T = any> {
   getHooks(type?: HookType, timing?: "pre" | "post"): any[];
   setHooksEnabled(enabled: boolean): void;
   areHooksEnabled(): boolean;
+
+  // Watch methods
+  watch(
+    id: string,
+    options?: import("./watch-types.ts").WatchOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<ModelDocument<T> & T>>;
+  watchMany(
+    ids: string[],
+    options?: import("./watch-types.ts").WatchOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<ModelDocument<T> & T>>;
+  watchQuery(
+    options?: import("./watch-types.ts").WatchManyOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<ModelDocument<T> & T>>;
+  watchRelations(
+    id: string,
+    relation: string,
+    options?: import("./watch-types.ts").WatchRelationOptions,
+  ): Promise<import("./watch-types.ts").WatchResult<ModelDocument<T> & T>>;
 }
 
 /**

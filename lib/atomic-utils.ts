@@ -267,7 +267,7 @@ export async function retryAtomicTransaction(
     failedMutation: {
       index: -1,
       mutation: {} as AtomicMutation,
-      error: new KVMOperationError("atomic","All retry attempts failed"),
+      error: new KVMOperationError("atomic", "All retry attempts failed"),
     },
   };
 }
@@ -319,7 +319,10 @@ export async function createSwapTransaction(
   ]);
 
   if (!record1.value || !record2.value) {
-    throw new KVMOperationError("atomic","Both records must exist for swap operation");
+    throw new KVMOperationError(
+      "atomic",
+      "Both records must exist for swap operation",
+    );
   }
 
   return createAtomicBuilder(kv)
@@ -357,7 +360,10 @@ export const AtomicUtils = {
    */
   compose(builders: AtomicMutationBuilder[]): AtomicMutationBuilder {
     if (builders.length === 0) {
-      throw new KVMOperationError("atomic","Cannot compose empty array of builders");
+      throw new KVMOperationError(
+        "atomic",
+        "Cannot compose empty array of builders",
+      );
     }
 
     const primaryBuilder = builders[0];
@@ -442,7 +448,8 @@ export const AtomicUtils = {
    */
   validateLimits(mutations: AtomicMutation[]): void {
     if (mutations.length > 1000) {
-      throw new KVMOperationError("atomic",
+      throw new KVMOperationError(
+        "atomic",
         `Too many mutations: ${mutations.length}. Deno KV maximum is 1000 per transaction.`,
       );
     }

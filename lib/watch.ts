@@ -1,17 +1,17 @@
 import type { KVMEntity } from "./types.ts";
 import type { ZodRawShape } from "zod";
 import type {
+  BatchWatchEvent,
+  BatchWatchOptions,
+  SSEOptions,
+  WatchCallback,
   WatchEvent,
-  WatchOptions,
   WatchManyOptions,
+  WatchOptions,
   WatchRelationOptions,
   WatchResult,
-  WatchStream,
-  WatchCallback,
   WatchState,
-  BatchWatchOptions,
-  BatchWatchEvent,
-  SSEOptions,
+  WatchStream,
   WebSocketOptions,
 } from "./watch-types.ts";
 import { WatchEventType } from "./watch-types.ts";
@@ -58,7 +58,8 @@ export class WatchManager {
     entity: KVMEntity<T>,
     options: WatchManyOptions = {},
   ): Promise<WatchResult<T>> {
-    const { where, limit = 10, prefix, watchAll = false, ...watchOptions } = options;
+    const { where, limit = 10, prefix, watchAll = false, ...watchOptions } =
+      options;
 
     // First, find the records that match the criteria
     const findOptions = {
@@ -70,14 +71,18 @@ export class WatchManager {
     try {
       records = await findMany(entity, this.kv, findOptions);
     } catch (error) {
-      throw new Error(`Failed to find records for watching: ${(error as Error).message}`);
+      throw new Error(
+        `Failed to find records for watching: ${(error as Error).message}`,
+      );
     }
 
     // Extract keys from found records
-    const keys = records.map(record => {
+    const keys = records.map((record) => {
       // Get the primary key value from the record
       const primaryKeyDef = entity.primaryKey[0];
-      const primaryKeyValue = primaryKeyDef.key ? (record.value as any)[primaryKeyDef.key] : record.value;
+      const primaryKeyValue = primaryKeyDef.key
+        ? (record.value as any)[primaryKeyDef.key]
+        : record.value;
       return WatchUtils.generateWatchKey(entity, primaryKeyValue);
     });
 
@@ -97,24 +102,27 @@ export class WatchManager {
     id: string | Record<string, any>,
     options: WatchRelationOptions,
   ): Promise<WatchResult<T>> {
-    const { relation, includeRelated = true, depth = 1, ...watchOptions } = options;
+    const { relation, includeRelated = true, depth = 1, ...watchOptions } =
+      options;
 
     if (!entity.relations) {
       throw new Error(`Entity ${entity.name} has no relations defined`);
     }
 
-    const relationDef = entity.relations.find(r => r.entityName === relation);
+    const relationDef = entity.relations.find((r) => r.entityName === relation);
     if (!relationDef) {
-      throw new Error(`Relation ${relation} not found on entity ${entity.name}`);
+      throw new Error(
+        `Relation ${relation} not found on entity ${entity.name}`,
+      );
     }
 
     // For now, implement basic relation watching
     // This would need to be expanded based on relation types
     const mainKey = WatchUtils.generateWatchKey(entity, id);
-    
+
     // Generate keys for related entities based on relation type
     const relatedKeys: Deno.KvKey[] = [];
-    
+
     if (relationDef.type === "hasMany" && relationDef.foreignKey) {
       // Watch related records via foreign key
       const relatedPrefix: Deno.KvKey = [relationDef.entityName];
@@ -129,12 +137,16 @@ export class WatchManager {
    * Watch multiple entities in a single stream
    * NOTE: This is a placeholder implementation - full batch watching requires entity registry
    */
-  async watchBatch(options: BatchWatchOptions): Promise<ReadableStream<BatchWatchEvent>> {
+  async watchBatch(
+    options: BatchWatchOptions,
+  ): Promise<ReadableStream<BatchWatchEvent>> {
     const { entities, global = {}, maxKeys = 50 } = options;
-    
+
     // This would need entity registry to resolve entity definitions
     // For now, we'll throw an error indicating this needs implementation
-    throw new Error("Batch watching requires entity registry - not yet implemented");
+    throw new Error(
+      "Batch watching requires entity registry - not yet implemented",
+    );
   }
 
   /**
@@ -150,7 +162,9 @@ export class WatchManager {
 
     // Deno KV supports max 10 keys per watch
     if (keys.length > 10) {
-      throw new Error(`Cannot watch more than 10 keys at once. Got ${keys.length} keys.`);
+      throw new Error(
+        `Cannot watch more than 10 keys at once. Got ${keys.length} keys.`,
+      );
     }
 
     const state: WatchState = {
@@ -163,11 +177,11 @@ export class WatchManager {
 
     // Get initial state of all keys
     const initialEntries = await Promise.all(
-      keys.map(key => this.kv.get(key))
+      keys.map((key) => this.kv.get(key)),
     );
 
     let previousValues = new Map<string, T | null>();
-    
+
     // Store initial values
     initialEntries.forEach((entry, index) => {
       const keyStr = JSON.stringify(keys[index]);
@@ -202,7 +216,7 @@ export class WatchManager {
           previousValues,
           includeDeleted,
           raw,
-        ).catch(error => controller.error(error));
+        ).catch((error) => controller.error(error));
       },
 
       cancel() {
@@ -253,7 +267,7 @@ export class WatchManager {
   ) {
     try {
       const watchStream = this.kv.watch(keys, { raw });
-      
+
       for await (const entries of watchStream) {
         if (!state.active) {
           break;
@@ -296,7 +310,7 @@ export class WatchManager {
           controller.enqueue(event);
 
           // Call registered callbacks
-          state.callbacks.forEach(callback => {
+          state.callbacks.forEach((callback) => {
             try {
               callback(event);
             } catch (error) {
@@ -324,7 +338,19 @@ export class WatchManager {
     if (state) {
       state.active = false;
       state.abortController?.abort();
-      state.controller?.close();
+      
+      // Only close if controller exists and stream isn't already closed
+      if (state.controller) {
+        try {
+          state.controller.close();
+        } catch (error) {
+          // Ignore error if stream is already closed
+          if (!(error instanceof TypeError && error.message.includes("cannot close or enqueue"))) {
+            throw error;
+          }
+        }
+      }
+      
       this.activeWatches.delete(watchId);
     }
   }
@@ -343,8 +369,10 @@ export class WatchManager {
       stream,
       stop: () => {},
       on: () => () => {},
-      toSSE: (options?: SSEOptions) => WatchUtils.createSSEResponse(stream, options),
-      toWebSocket: (options?: WebSocketOptions) => WatchUtils.createWebSocketHandler(stream, options),
+      toSSE: (options?: SSEOptions) =>
+        WatchUtils.createSSEResponse(stream, options),
+      toWebSocket: (options?: WebSocketOptions) =>
+        WatchUtils.createWebSocketHandler(stream, options),
     };
   }
 
@@ -383,7 +411,9 @@ export function initializeWatchManager(kv: Deno.Kv): WatchManager {
  */
 export function getWatchManager(): WatchManager {
   if (!globalWatchManager) {
-    throw new Error("Watch manager not initialized. Call initializeWatchManager() first.");
+    throw new Error(
+      "Watch manager not initialized. Call initializeWatchManager() first.",
+    );
   }
   return globalWatchManager;
 }

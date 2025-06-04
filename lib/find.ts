@@ -462,7 +462,9 @@ async function _eagerLoadManyToMany(
         name: relation.entityName,
         primaryKey: [{ name: relation.entityName, key: "id" }],
       } as KVMEntity;
-      const validRecords = relatedRecords.filter(r => r?.value !== null) as Deno.KvEntry<unknown>[];
+      const validRecords = relatedRecords.filter((r) =>
+        r?.value !== null
+      ) as Deno.KvEntry<unknown>[];
       if (validRecords.length > 0) {
         await eagerLoadRelations(
           relatedEntity,
