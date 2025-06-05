@@ -467,7 +467,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
   /**
    * Get the primary key value for this document
    */
-  private _getPrimaryKeyValue(): string | Record<string, any> {
+  public _getPrimaryKeyValue(): string | Record<string, any> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyDef = ModelClass.entity.primaryKey[0];
 
@@ -1202,6 +1202,267 @@ export function createModelClass<T = any>(
       }
 
       return new this(data) as DynamicModel & T;
+    }
+
+    /**
+     * Update a document by its ID
+     */
+    static async update(
+      id: string | Deno.KvKeyPart,
+      data: Partial<T>,
+      options?: UpdateOptions,
+    ): Promise<DynamicModel & T> {
+      const context: HookContext<T> = {
+        modelName,
+        operation: "update",
+        input: data,
+        options,
+      };
+
+      try {
+        // Execute pre-update hooks
+        const preUpdateResult = await this.hooks.executePreHooks(
+          "update",
+          context,
+        );
+        if (!preUpdateResult.success) {
+          throw preUpdateResult.errors[0];
+        }
+
+        // Find the existing document first to ensure it exists
+        const existing = typeof id === 'string' 
+          ? await this.findById(id)
+          : await this.findUnique(id);
+          
+        if (!existing) {
+          throw new KVMNotFoundError(modelName, id as string | Record<string, any>, "id");
+        }
+
+        // Update using the core update function
+        const result = await update<T>(this.entity, this.kv, id, data, options);
+
+        if (!result?.value) {
+          throw new KVMOperationError(
+            "update",
+            "Failed to update document",
+            modelName,
+          );
+        }
+
+        const instance = new this(result.value) as DynamicModel & T;
+
+        // Execute post-update hooks
+        await this.hooks.executePostHooks("update", context, result, instance);
+
+        return instance;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, "update", modelName);
+      }
+    }
+
+    /**
+     * Upsert operation: find by criteria, update if found, create if not found
+     */
+    static async upsert(
+      findCriteria: Record<string, any>,
+      updateData: Partial<T>,
+      createData: T,
+      options?: CreateOptions | UpdateOptions,
+    ): Promise<DynamicModel & T> {
+      const context: HookContext<T> = {
+        modelName,
+        operation: "upsert",
+        input: { findCriteria, updateData, createData },
+        options,
+      };
+
+      try {
+        // Execute pre-upsert hooks
+        const preUpsertResult = await this.hooks.executePreHooks(
+          "upsert",
+          context,
+        );
+        if (!preUpsertResult.success) {
+          throw preUpsertResult.errors[0];
+        }
+
+        // Try to find existing document by criteria
+        let existing: (DynamicModel & T) | null = null;
+
+        // If findCriteria has the primary key field, use findById for efficiency
+        const primaryKeyField = this.entity.primaryKey.find(pk => pk.key)?.key;
+        if (primaryKeyField && findCriteria[primaryKeyField]) {
+          existing = await this.findById(findCriteria[primaryKeyField]);
+        } else {
+          // Find by secondary index or other criteria
+          const criteriaKeys = Object.keys(findCriteria);
+          if (criteriaKeys.length === 1) {
+            const [fieldName] = criteriaKeys;
+            const fieldValue = findCriteria[fieldName];
+            
+            // Check if this field has a secondary index
+            const hasIndex = this.entity.secondaryIndexes?.some(
+              idx => idx.key.some(keyPart => keyPart.key === fieldName)
+            );
+            
+            if (hasIndex) {
+              existing = await this.findUnique(fieldValue, fieldName);
+            } else {
+              // Fall back to scanning all records - this is inefficient for large datasets
+              // In a real implementation, you might want to limit this or require indexes
+              const results = await this.findMany({ limit: 1000 });
+              existing = results.find(doc => {
+                return Object.entries(findCriteria).every(([key, value]) => 
+                  (doc as any)[key] === value
+                );
+              }) || null;
+            }
+          } else {
+            // Multiple criteria - scan and filter
+            const results = await this.findMany({ limit: 1000 });
+            existing = results.find(doc => {
+              return Object.entries(findCriteria).every(([key, value]) => 
+                (doc as any)[key] === value
+              );
+            }) || null;
+          }
+        }
+
+        let result: DynamicModel & T;
+
+        if (existing) {
+          // Update existing document using the primary key value
+          const primaryKeyValue = existing._getPrimaryKeyValue();
+          result = await this.update(
+            primaryKeyValue as string | Deno.KvKeyPart,
+            updateData,
+            options as UpdateOptions,
+          );
+        } else {
+          // Create new document
+          result = await this.create(createData, options as CreateOptions);
+        }
+
+        // Execute post-upsert hooks
+        await this.hooks.executePostHooks("upsert", context, result, result);
+
+        return result;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, "update", modelName);
+      }
+    }
+
+    /**
+     * Batch upsert operations
+     */
+    static async upsertMany(
+      operations: Array<{
+        findCriteria: Record<string, any>;
+        updateData: Partial<T>;
+        createData: T;
+        options?: CreateOptions | UpdateOptions;
+      }>,
+      batchOptions?: {
+        atomic?: boolean;
+        continueOnError?: boolean;
+      },
+    ): Promise<BatchCreateResult<DynamicModel & T>> {
+      const context: HookContext<T> = {
+        modelName,
+        operation: "upsertMany",
+        input: operations,
+        options: batchOptions,
+      };
+
+      try {
+        // Execute pre-upsertMany hooks
+        const preUpsertManyResult = await this.hooks.executePreHooks(
+          "upsertMany",
+          context,
+        );
+        if (!preUpsertManyResult.success) {
+          throw preUpsertManyResult.errors[0];
+        }
+
+        const results: (DynamicModel & T)[] = [];
+        const errors: Array<{ index: number; error: Error; data: any }> = [];
+
+        if (batchOptions?.atomic) {
+          // For atomic operations, we need to handle this differently
+          // Since we need to check existence first, we'll do individual upserts
+          // but ensure they're all processed together
+          for (let i = 0; i < operations.length; i++) {
+            try {
+              const result = await this.upsert(
+                operations[i].findCriteria,
+                operations[i].updateData,
+                operations[i].createData,
+                operations[i].options,
+              );
+              results.push(result);
+            } catch (error) {
+              if (batchOptions?.continueOnError) {
+                errors.push({
+                  index: i,
+                  error: error as Error,
+                  data: operations[i],
+                });
+              } else {
+                throw error;
+              }
+            }
+          }
+        } else {
+          // Non-atomic batch processing
+          for (let i = 0; i < operations.length; i++) {
+            try {
+              const result = await this.upsert(
+                operations[i].findCriteria,
+                operations[i].updateData,
+                operations[i].createData,
+                operations[i].options,
+              );
+              results.push(result);
+            } catch (error) {
+              if (batchOptions?.continueOnError) {
+                errors.push({
+                  index: i,
+                  error: error as Error,
+                  data: operations[i],
+                });
+              } else {
+                throw error;
+              }
+            }
+          }
+        }
+
+        const batchResult: BatchCreateResult<DynamicModel & T> = {
+          created: results,
+          failed: errors,
+          stats: {
+            total: operations.length,
+            created: results.length,
+            failed: errors.length,
+          },
+        };
+
+        // Execute post-upsertMany hooks
+        await this.hooks.executePostHooks("upsertMany", context, batchResult, results[0] || null);
+
+        return batchResult;
+      } catch (error) {
+        if (KVMErrorUtils.isKVMError(error)) {
+          throw error;
+        }
+        throw KVMErrorUtils.wrap(error as Error, "create", modelName);
+      }
     }
 
     /**

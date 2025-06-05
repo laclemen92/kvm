@@ -148,6 +148,31 @@ export interface ModelStatic<T = any> {
     options?: BatchDeleteOptions,
   ): Promise<BatchDeleteResult<ModelDocument<T> & T>>;
 
+  // Upsert operations
+  update(
+    id: string | Deno.KvKeyPart,
+    data: Partial<T>,
+    options?: UpdateOptions,
+  ): Promise<ModelDocument<T> & T>;
+  upsert(
+    findCriteria: Record<string, any>,
+    updateData: Partial<T>,
+    createData: T,
+    options?: CreateOptions | UpdateOptions,
+  ): Promise<ModelDocument<T> & T>;
+  upsertMany(
+    operations: Array<{
+      findCriteria: Record<string, any>;
+      updateData: Partial<T>;
+      createData: T;
+      options?: CreateOptions | UpdateOptions;
+    }>,
+    batchOptions?: {
+      atomic?: boolean;
+      continueOnError?: boolean;
+    },
+  ): Promise<BatchCreateResult<ModelDocument<T> & T>>;
+
   // Middleware/Hooks methods
   pre(type: HookType, fn: PreHookFunction<T>, options?: HookOptions): void;
   post(type: HookType, fn: PostHookFunction<T>, options?: HookOptions): void;

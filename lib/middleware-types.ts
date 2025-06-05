@@ -11,6 +11,8 @@ export type HookType =
   | "validate" // Before validation
   | "create" // Before/after document creation
   | "update" // Before/after document update
+  | "upsert" // Before/after upsert operations
+  | "upsertMany" // Before/after batch upsert operations
   | "save" // Before/after save (create or update)
   | "delete" // Before/after document deletion
   | "find" // Before/after find operations
@@ -33,7 +35,7 @@ export interface HookContext<T = any> {
   /** The document being operated on (may be undefined for pre-create) */
   document?: ModelDocument<T> & T;
   /** The input data for create/update operations */
-  input?: Partial<T>;
+  input?: Partial<T> | any;
   /** Query conditions for find operations */
   conditions?: Record<string, any>;
   /** Additional options passed to the operation */
