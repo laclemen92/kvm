@@ -46,6 +46,11 @@ import {
   deleteMany as batchDelete,
   updateMany as batchUpdate,
 } from "./batch-operations.ts";
+import {
+  enhancedCreateMany,
+  enhancedDeleteMany,
+  enhancedUpdateMany,
+} from "./batch-enhanced.ts";
 import { KVMHookManager } from "./middleware.ts";
 import {
   KVMErrorUtils,
@@ -901,13 +906,18 @@ export function createModelClass<T = any>(
       options?: BatchCreateOptions,
     ): Promise<BatchCreateResult<DynamicModel & T>> {
       try {
-        const result = await batchCreate<T>(
-          this.entity,
-          this.kv,
-          data,
-          options,
-          modelName,
+        // Use enhanced batch operations if retry options are provided
+        const hasRetryOptions = options && (
+          options.maxRetries !== undefined ||
+          options.retryDelay !== undefined ||
+          options.rollbackOnAnyFailure !== undefined ||
+          options.shouldRetry !== undefined ||
+          options.onRetry !== undefined
         );
+
+        const result = hasRetryOptions
+          ? await enhancedCreateMany<T>(this.entity, this.kv, data, options, modelName)
+          : await batchCreate<T>(this.entity, this.kv, data, options, modelName);
 
         // Convert created items to model instances
         const convertedResult: BatchCreateResult<DynamicModel & T> = {
@@ -935,13 +945,18 @@ export function createModelClass<T = any>(
       options?: BatchUpdateOptions,
     ): Promise<BatchUpdateResult<DynamicModel & T>> {
       try {
-        const result = await batchUpdate<T>(
-          this.entity,
-          this.kv,
-          updates,
-          options,
-          modelName,
+        // Use enhanced batch operations if retry options are provided
+        const hasRetryOptions = options && (
+          options.maxRetries !== undefined ||
+          options.retryDelay !== undefined ||
+          options.rollbackOnAnyFailure !== undefined ||
+          options.shouldRetry !== undefined ||
+          options.onRetry !== undefined
         );
+
+        const result = hasRetryOptions
+          ? await enhancedUpdateMany<T>(this.entity, this.kv, updates, options, modelName)
+          : await batchUpdate<T>(this.entity, this.kv, updates, options, modelName);
 
         // Convert updated items to model instances
         const convertedResult: BatchUpdateResult<DynamicModel & T> = {
@@ -970,13 +985,18 @@ export function createModelClass<T = any>(
       options?: BatchDeleteOptions,
     ): Promise<BatchDeleteResult<DynamicModel & T>> {
       try {
-        const result = await batchDelete<T>(
-          this.entity,
-          this.kv,
-          keys,
-          options,
-          modelName,
+        // Use enhanced batch operations if retry options are provided
+        const hasRetryOptions = options && (
+          options.maxRetries !== undefined ||
+          options.retryDelay !== undefined ||
+          options.rollbackOnAnyFailure !== undefined ||
+          options.shouldRetry !== undefined ||
+          options.onRetry !== undefined
         );
+
+        const result = hasRetryOptions
+          ? await enhancedDeleteMany<T>(this.entity, this.kv, keys, options, modelName)
+          : await batchDelete<T>(this.entity, this.kv, keys, options, modelName);
 
         // Convert deleted items to model instances (if returned)
         const convertedResult: BatchDeleteResult<DynamicModel & T> = {
@@ -996,6 +1016,33 @@ export function createModelClass<T = any>(
         }
         throw KVMErrorUtils.wrap(error as Error, "delete", modelName);
       }
+    }
+
+    /**
+     * Atomic bulk update with rollback support
+     */
+    static async atomicBulkUpdate(
+      updates: Array<{
+        id: string | Deno.KvKeyPart;
+        data: Partial<T>;
+      }>,
+      options?: {
+        rollbackOnAnyFailure?: boolean;
+        maxRetries?: number;
+        retryDelay?: number;
+      },
+    ): Promise<BatchUpdateResult<DynamicModel & T>> {
+      const batchUpdates: BatchUpdateInput<T>[] = updates.map((update) => ({
+        key: update.id,
+        data: update.data,
+      }));
+
+      return this.updateMany(batchUpdates, {
+        atomic: true,
+        rollbackOnAnyFailure: options?.rollbackOnAnyFailure ?? true,
+        maxRetries: options?.maxRetries ?? 0,
+        retryDelay: options?.retryDelay ?? 1000,
+      });
     }
 
     /**
@@ -1450,6 +1497,8 @@ export function createModelClass<T = any>(
             total: operations.length,
             created: results.length,
             failed: errors.length,
+            retried: 0,
+            rolledBack: 0,
           },
         };
 

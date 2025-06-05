@@ -118,6 +118,8 @@ export async function createMany<T>(
       total: data.length,
       created: 0,
       failed: 0,
+      retried: 0,
+      rolledBack: 0,
     },
   };
 
@@ -371,6 +373,8 @@ export async function updateMany<T>(
       updated: 0,
       notFound: 0,
       failed: 0,
+      retried: 0,
+      rolledBack: 0,
     },
   };
 
@@ -612,6 +616,8 @@ export async function deleteMany<T>(
       deleted: 0,
       notFound: 0,
       failed: 0,
+      retried: 0,
+      rolledBack: 0,
     },
   };
 

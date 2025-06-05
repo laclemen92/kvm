@@ -173,6 +173,19 @@ export interface ModelStatic<T = any> {
     },
   ): Promise<BatchCreateResult<ModelDocument<T> & T>>;
 
+  // Enhanced batch operations
+  atomicBulkUpdate(
+    updates: Array<{
+      id: string | Deno.KvKeyPart;
+      data: Partial<T>;
+    }>,
+    options?: {
+      rollbackOnAnyFailure?: boolean;
+      maxRetries?: number;
+      retryDelay?: number;
+    },
+  ): Promise<BatchUpdateResult<ModelDocument<T> & T>>;
+
   // Middleware/Hooks methods
   pre(type: HookType, fn: PreHookFunction<T>, options?: HookOptions): void;
   post(type: HookType, fn: PostHookFunction<T>, options?: HookOptions): void;

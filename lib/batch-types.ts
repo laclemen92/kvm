@@ -40,6 +40,37 @@ export interface BatchCreateOptions extends CreateOptions {
    * Useful for very large datasets.
    */
   batchSize?: number;
+
+  /**
+   * Maximum number of retry attempts for failed operations.
+   * @default 0
+   */
+  maxRetries?: number;
+
+  /**
+   * Delay between retry attempts in milliseconds.
+   * @default 1000
+   */
+  retryDelay?: number;
+
+  /**
+   * If true, rolls back all successful operations if any operation fails.
+   * Only applicable when atomic is false.
+   * @default false
+   */
+  rollbackOnAnyFailure?: boolean;
+
+  /**
+   * Function to determine if an error should be retried.
+   * If not provided, uses default retry logic.
+   */
+  shouldRetry?: (error: Error, attempt: number) => boolean;
+
+  /**
+   * Function called before each retry attempt.
+   * Useful for logging or implementing exponential backoff.
+   */
+  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
 }
 
 /**
@@ -68,6 +99,35 @@ export interface BatchUpdateOptions extends UpdateOptions {
    * Maximum number of items to process in a single batch.
    */
   batchSize?: number;
+
+  /**
+   * Maximum number of retry attempts for failed operations.
+   * @default 0
+   */
+  maxRetries?: number;
+
+  /**
+   * Delay between retry attempts in milliseconds.
+   * @default 1000
+   */
+  retryDelay?: number;
+
+  /**
+   * If true, rolls back all successful operations if any operation fails.
+   * Only applicable when atomic is false.
+   * @default false
+   */
+  rollbackOnAnyFailure?: boolean;
+
+  /**
+   * Function to determine if an error should be retried.
+   */
+  shouldRetry?: (error: Error, attempt: number) => boolean;
+
+  /**
+   * Function called before each retry attempt.
+   */
+  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
 }
 
 /**
@@ -102,6 +162,35 @@ export interface BatchDeleteOptions extends DeleteOptions {
    * Maximum number of items to process in a single batch.
    */
   batchSize?: number;
+
+  /**
+   * Maximum number of retry attempts for failed operations.
+   * @default 0
+   */
+  maxRetries?: number;
+
+  /**
+   * Delay between retry attempts in milliseconds.
+   * @default 1000
+   */
+  retryDelay?: number;
+
+  /**
+   * If true, rolls back all successful operations if any operation fails.
+   * Only applicable when atomic is false.
+   * @default false
+   */
+  rollbackOnAnyFailure?: boolean;
+
+  /**
+   * Function to determine if an error should be retried.
+   */
+  shouldRetry?: (error: Error, attempt: number) => boolean;
+
+  /**
+   * Function called before each retry attempt.
+   */
+  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
 }
 
 /**
@@ -174,6 +263,8 @@ export interface BatchCreateResult<T> {
     data: any;
     error: Error;
     index: number;
+    retryCount?: number;
+    finalAttempt?: boolean;
   }>;
 
   /**
@@ -183,6 +274,8 @@ export interface BatchCreateResult<T> {
     total: number;
     created: number;
     failed: number;
+    retried: number;
+    rolledBack: number;
   };
 }
 
@@ -211,6 +304,8 @@ export interface BatchUpdateResult<T> {
     data: any;
     error: Error;
     index: number;
+    retryCount?: number;
+    finalAttempt?: boolean;
   }>;
 
   /**
@@ -221,6 +316,8 @@ export interface BatchUpdateResult<T> {
     updated: number;
     notFound: number;
     failed: number;
+    retried: number;
+    rolledBack: number;
   };
 }
 
@@ -253,6 +350,8 @@ export interface BatchDeleteResult<T> {
     key: any;
     error: Error;
     index: number;
+    retryCount?: number;
+    finalAttempt?: boolean;
   }>;
 
   /**
@@ -263,6 +362,8 @@ export interface BatchDeleteResult<T> {
     deleted: number;
     notFound: number;
     failed: number;
+    retried: number;
+    rolledBack: number;
   };
 }
 
