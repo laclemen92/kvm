@@ -5,18 +5,15 @@
 import { MigrationStorage } from "./migration-storage.ts";
 import { KVMMigrationUtils } from "./migration-utils.ts";
 import type {
+  AppliedMigration,
   Migration,
+  MigrationExecutionResult,
   MigrationOptions,
   MigrationResult,
-  MigrationExecutionResult,
   MigrationStatus,
-  AppliedMigration,
   MigrationStorageConfig,
 } from "./migration-types.ts";
-import {
-  MigrationError,
-  MigrationStateError,
-} from "./migration-types.ts";
+import { MigrationError, MigrationStateError } from "./migration-types.ts";
 
 /**
  * Manages the execution and tracking of database migrations
@@ -52,21 +49,23 @@ export class MigrationManager {
 
     // Load from directory
     const migrations: Migration[] = [];
-    
+
     try {
       for await (const dirEntry of Deno.readDir(migrationsPath)) {
-        if (dirEntry.isFile && dirEntry.name.endsWith('.ts')) {
+        if (dirEntry.isFile && dirEntry.name.endsWith(".ts")) {
           const migrationPath = `${migrationsPath}/${dirEntry.name}`;
-          
+
           try {
             const module = await import(migrationPath);
             const migration = module.default as Migration;
-            
-            if (!migration || typeof migration !== 'object') {
-              console.warn(`Migration file ${dirEntry.name} does not export a default migration object`);
+
+            if (!migration || typeof migration !== "object") {
+              console.warn(
+                `Migration file ${dirEntry.name} does not export a default migration object`,
+              );
               continue;
             }
-            
+
             migrations.push(migration);
           } catch (error) {
             console.warn(`Failed to load migration ${dirEntry.name}:`, error);
@@ -93,7 +92,10 @@ export class MigrationManager {
 
     for (const migration of sortedMigrations) {
       // Check for required properties
-      if (!migration.version || !migration.description || !migration.up || !migration.down) {
+      if (
+        !migration.version || !migration.description || !migration.up ||
+        !migration.down
+      ) {
         throw new MigrationError(
           `Invalid migration: missing required properties (version, description, up, down)`,
           migration,
@@ -107,7 +109,7 @@ export class MigrationManager {
           migration,
         );
       }
-      
+
       versions.add(migration.version);
 
       // Check version is positive integer
@@ -123,7 +125,7 @@ export class MigrationManager {
     for (let i = 1; i < sortedMigrations.length; i++) {
       const current = sortedMigrations[i];
       const previous = sortedMigrations[i - 1];
-      
+
       if (current.version !== previous.version + 1) {
         throw new MigrationError(
           `Gap in migration sequence: version ${previous.version} followed by ${current.version}`,
@@ -142,14 +144,15 @@ export class MigrationManager {
     const migrations = await this.loadMigrations(
       options.migrationsPath ?? "./migrations",
     );
-    
+
     const currentVersion = await this.storage.getCurrentVersion();
     const appliedMigrations = await this.storage.getAppliedMigrations();
-    const appliedVersions = new Set(appliedMigrations.map(m => m.version));
+    const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
 
     // Determine which migrations to run
-    const targetVersion = options.toVersion ?? Math.max(...migrations.map(m => m.version), 0);
-    const pendingMigrations = migrations.filter(m => 
+    const targetVersion = options.toVersion ??
+      Math.max(...migrations.map((m) => m.version), 0);
+    const pendingMigrations = migrations.filter((m) =>
       m.version <= targetVersion && !appliedVersions.has(m.version)
     );
 
@@ -172,12 +175,16 @@ export class MigrationManager {
           await options.onBeforeMigration(migration);
         }
 
-        const executionResult = await this.executeMigration(migration, "up", options.dryRun);
-        
+        const executionResult = await this.executeMigration(
+          migration,
+          "up",
+          options.dryRun,
+        );
+
         if (executionResult.success) {
           result.executedMigrations.push(executionResult);
           result.currentVersion = migration.version;
-          
+
           if (!options.dryRun) {
             // Record migration as applied
             const appliedMigration: AppliedMigration = {
@@ -186,7 +193,7 @@ export class MigrationManager {
               appliedAt: new Date(),
               duration: executionResult.duration,
             };
-            
+
             await this.storage.applyMigration(
               currentVersion,
               migration.version,
@@ -197,7 +204,7 @@ export class MigrationManager {
           result.failedMigrations.push(executionResult);
           result.errors.push(executionResult.error!);
           result.success = false;
-          
+
           if (!options.continueOnError) {
             break;
           }
@@ -219,12 +226,15 @@ export class MigrationManager {
   /**
    * Rollback migrations to a specific version
    */
-  async down(toVersion?: number, migrations?: Migration[]): Promise<MigrationResult> {
+  async down(
+    toVersion?: number,
+    migrations?: Migration[],
+  ): Promise<MigrationResult> {
     const currentVersion = await this.storage.getCurrentVersion();
     const appliedMigrations = await this.storage.getAppliedMigrations();
-    
+
     const finalToVersion = toVersion ?? 0;
-    
+
     if (finalToVersion >= currentVersion) {
       throw new MigrationStateError(
         `Cannot rollback to version ${finalToVersion}: current version is ${currentVersion}`,
@@ -244,15 +254,15 @@ export class MigrationManager {
         // If we can't load from directory, we need the migrations to be provided
         throw new MigrationError(
           "Cannot rollback: migration definitions not available. " +
-          "Provide migrations array or ensure migration files are accessible.",
+            "Provide migrations array or ensure migration files are accessible.",
         );
       }
     }
-    const migrationMap = new Map(allMigrations.map(m => [m.version, m]));
+    const migrationMap = new Map(allMigrations.map((m) => [m.version, m]));
 
     // Get migrations to rollback (in reverse order)
     const migrationsToRollback = appliedMigrations
-      .filter(m => m.version > finalToVersion)
+      .filter((m) => m.version > finalToVersion)
       .sort((a, b) => b.version - a.version);
 
     const result: MigrationResult = {
@@ -270,7 +280,7 @@ export class MigrationManager {
     try {
       for (const appliedMigration of migrationsToRollback) {
         const migration = migrationMap.get(appliedMigration.version);
-        
+
         if (!migration) {
           const error = new MigrationError(
             `Cannot rollback migration ${appliedMigration.version}: migration definition not found`,
@@ -281,11 +291,11 @@ export class MigrationManager {
         }
 
         const executionResult = await this.executeMigration(migration, "down");
-        
+
         if (executionResult.success) {
           result.executedMigrations.push(executionResult);
           result.currentVersion = appliedMigration.version - 1;
-          
+
           // Remove migration from applied list
           await this.storage.rollbackMigration(
             currentVersion,
@@ -311,16 +321,24 @@ export class MigrationManager {
   /**
    * Get current migration status
    */
-  async getStatus(migrationsPath?: string | Migration[]): Promise<MigrationStatus> {
+  async getStatus(
+    migrationsPath?: string | Migration[],
+  ): Promise<MigrationStatus> {
     const currentVersion = await this.storage.getCurrentVersion();
     const appliedMigrations = await this.storage.getAppliedMigrations();
-    const availableMigrations = await this.loadMigrations(migrationsPath ?? "./migrations");
-    
-    const appliedVersions = new Set(appliedMigrations.map(m => m.version));
-    const pendingMigrations = availableMigrations.filter(m => !appliedVersions.has(m.version));
-    
-    const isUpToDate = pendingMigrations.length === 0 && 
-      (availableMigrations.length === 0 || currentVersion === Math.max(...availableMigrations.map(m => m.version)));
+    const availableMigrations = await this.loadMigrations(
+      migrationsPath ?? "./migrations",
+    );
+
+    const appliedVersions = new Set(appliedMigrations.map((m) => m.version));
+    const pendingMigrations = availableMigrations.filter((m) =>
+      !appliedVersions.has(m.version)
+    );
+
+    const isUpToDate = pendingMigrations.length === 0 &&
+      (availableMigrations.length === 0 ||
+        currentVersion ===
+          Math.max(...availableMigrations.map((m) => m.version)));
 
     return {
       currentVersion,
@@ -351,7 +369,7 @@ export class MigrationManager {
     try {
       if (dryRun) {
         // For dry run, just validate the migration function exists and is callable
-        if (typeof migration[direction] !== 'function') {
+        if (typeof migration[direction] !== "function") {
           throw new Error(`Migration ${direction} function is not callable`);
         }
         result.success = true;
@@ -363,7 +381,9 @@ export class MigrationManager {
       }
     } catch (error) {
       result.error = new MigrationError(
-        `Migration ${migration.version} (${direction}) failed: ${(error as Error).message}`,
+        `Migration ${migration.version} (${direction}) failed: ${
+          (error as Error).message
+        }`,
         migration,
         error as Error,
       );
@@ -395,8 +415,8 @@ export class MigrationManager {
    * Get migration statistics
    */
   async getStats(): Promise<{
-    storage: Awaited<ReturnType<MigrationStorage['getStats']>>;
-    utils: Awaited<ReturnType<KVMMigrationUtils['getMigrationStats']>>;
+    storage: Awaited<ReturnType<MigrationStorage["getStats"]>>;
+    utils: Awaited<ReturnType<KVMMigrationUtils["getMigrationStats"]>>;
   }> {
     const [storageStats, utilsStats] = await Promise.all([
       this.storage.getStats(),

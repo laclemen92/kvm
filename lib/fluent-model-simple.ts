@@ -5,7 +5,7 @@
 
 import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
 import { ulid } from "@std/ulid";
-import type { KVMEntity, Key, SecondaryIndex, Relation } from "./types.ts";
+import type { Key, KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
 import { createModelClass } from "./model.ts";
 import type { ModelConstructor } from "./model-types.ts";
@@ -28,26 +28,26 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.string();
-    
+
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
     if (options?.email) zodType = zodType.email();
     if (options?.url) zodType = zodType.url();
     if (options?.lowercase) zodType = zodType.toLowerCase();
     if (options?.uppercase) zodType = zodType.toUpperCase();
-    
+
     if (options?.ulid) {
       zodType = zodType.default(() => generateULID());
     } else if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -66,22 +66,22 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.number();
-    
+
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
     if (options?.int) zodType = zodType.int();
     if (options?.positive) zodType = zodType.positive();
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -96,17 +96,17 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.boolean();
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -123,11 +123,11 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.date();
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (options?.autoUpdate) {
       zodType = zodType.default(() => new Date());
@@ -135,7 +135,7 @@ export class SimpleField {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -152,17 +152,17 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.enum(values);
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -179,20 +179,20 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.array(itemType);
-    
+
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -207,17 +207,17 @@ export class SimpleField {
     index?: boolean;
   }) {
     let zodType: any = z.object(shape);
-    
+
     if (options?.default !== undefined) {
       const defaultValue = options.default;
       zodType = zodType.default(
-        typeof defaultValue === "function" ? defaultValue : () => defaultValue
+        typeof defaultValue === "function" ? defaultValue : () => defaultValue,
       );
     } else if (!options?.required) {
       // Only make optional if no default is provided
       zodType = zodType.optional();
     }
-    
+
     return {
       zodType,
       isPrimaryKey: options?.primaryKey || false,
@@ -230,13 +230,13 @@ export class SimpleField {
     uuid?: boolean;
   }) {
     let defaultFn: () => string;
-    
+
     if (options?.ulid) {
       defaultFn = generateULID;
     } else {
       defaultFn = () => crypto.randomUUID();
     }
-    
+
     return {
       zodType: z.string().default(defaultFn),
       isPrimaryKey: true,
@@ -276,9 +276,15 @@ export interface SimpleModelDefinition {
   fields: Record<string, any>;
   indexes?: string[];
   relations?: {
-    hasMany?: Record<string, { foreignKey: string; through?: string; cascade?: boolean }>;
+    hasMany?: Record<
+      string,
+      { foreignKey: string; through?: string; cascade?: boolean }
+    >;
     belongsTo?: Record<string, { foreignKey: string; cascade?: boolean }>;
-    manyToMany?: Record<string, { through: string; foreignKey: string; cascade?: boolean }>;
+    manyToMany?: Record<
+      string,
+      { through: string; foreignKey: string; cascade?: boolean }
+    >;
   };
   timestamps?: boolean;
 }
@@ -296,7 +302,10 @@ export class SimpleFluentKVM {
   /**
    * Define a model with a simple schema definition
    */
-  defineModel<T = any>(name: string, definition: SimpleModelDefinition): ModelConstructor<T> {
+  defineModel<T = any>(
+    name: string,
+    definition: SimpleModelDefinition,
+  ): ModelConstructor<T> {
     const schemaShape: ZodRawShape = {};
     const secondaryIndexes: SecondaryIndex[] = [];
     const relations: Relation[] = [];
@@ -345,7 +354,11 @@ export class SimpleFluentKVM {
 
     // Process relations
     if (definition.relations?.hasMany) {
-      for (const [relationName, config] of Object.entries(definition.relations.hasMany)) {
+      for (
+        const [relationName, config] of Object.entries(
+          definition.relations.hasMany,
+        )
+      ) {
         relations.push({
           entityName: relationName,
           fields: [config.foreignKey],
@@ -358,7 +371,11 @@ export class SimpleFluentKVM {
     }
 
     if (definition.relations?.belongsTo) {
-      for (const [relationName, config] of Object.entries(definition.relations.belongsTo)) {
+      for (
+        const [relationName, config] of Object.entries(
+          definition.relations.belongsTo,
+        )
+      ) {
         relations.push({
           entityName: relationName,
           fields: [config.foreignKey],
@@ -370,7 +387,11 @@ export class SimpleFluentKVM {
     }
 
     if (definition.relations?.manyToMany) {
-      for (const [relationName, config] of Object.entries(definition.relations.manyToMany)) {
+      for (
+        const [relationName, config] of Object.entries(
+          definition.relations.manyToMany,
+        )
+      ) {
         relations.push({
           entityName: relationName,
           fields: [config.foreignKey],
@@ -387,7 +408,9 @@ export class SimpleFluentKVM {
       name,
       primaryKey,
       schema: z.object(schemaShape),
-      secondaryIndexes: secondaryIndexes.length > 0 ? secondaryIndexes : undefined,
+      secondaryIndexes: secondaryIndexes.length > 0
+        ? secondaryIndexes
+        : undefined,
       relations: relations.length > 0 ? relations : undefined,
     };
 

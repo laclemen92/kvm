@@ -1,13 +1,13 @@
 /**
  * Example: Building Rate Limiting using KVM's Core Atomic Utilities
- * 
+ *
  * This example shows how to implement rate limiting with features like:
  * - Token bucket algorithm
  * - Sliding window rate limiting
  * - Per-user/IP rate limits
  * - Different time windows (second, minute, hour, day)
  * - Burst handling
- * 
+ *
  * This is built using KVM's core AtomicCounter with time-based keys.
  */
 
@@ -48,29 +48,29 @@ export class AtomicRateLimit {
   async checkAndIncrement(
     identifier: string,
     config: RateLimitConfig,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<RateLimitResult> {
     const windowKey = this.getWindowKey(identifier, config, timestamp);
     const counter = AtomicUtils.counter(this.kv, windowKey);
-    
+
     // Get current count
     const currentCount = await counter.get();
     const currentCountNum = Number(currentCount);
-    
+
     // Calculate reset time
     const windowStart = this.getWindowStart(timestamp, config.windowMs);
     const resetTime = windowStart + config.windowMs - timestamp.getTime();
-    
+
     // Check if request is allowed
     const allowed = currentCountNum < config.maxRequests;
-    
+
     let newCount = currentCountNum;
     if (allowed) {
       // Increment the counter
       await counter.increment();
       newCount = currentCountNum + 1;
     }
-    
+
     return {
       allowed,
       currentCount: newCount,
@@ -86,15 +86,15 @@ export class AtomicRateLimit {
   async check(
     identifier: string,
     config: RateLimitConfig,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<RateLimitResult> {
     const windowKey = this.getWindowKey(identifier, config, timestamp);
     const counter = AtomicUtils.counter(this.kv, windowKey);
-    
+
     const currentCount = Number(await counter.get());
     const windowStart = this.getWindowStart(timestamp, config.windowMs);
     const resetTime = windowStart + config.windowMs - timestamp.getTime();
-    
+
     return {
       allowed: currentCount < config.maxRequests,
       currentCount,
@@ -110,7 +110,7 @@ export class AtomicRateLimit {
   async reset(
     identifier: string,
     config: RateLimitConfig,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<AtomicTransactionResult> {
     const windowKey = this.getWindowKey(identifier, config, timestamp);
     const counter = AtomicUtils.counter(this.kv, windowKey);
@@ -123,36 +123,39 @@ export class AtomicRateLimit {
   async checkSlidingWindow(
     identifier: string,
     config: RateLimitConfig,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<RateLimitResult> {
     const now = timestamp.getTime();
     const windowStart = now - config.windowMs;
-    
+
     // Count requests in the sliding window
     let count = 0;
     const prefix = [this.namespace, "sliding", identifier];
-    
+
     for await (const entry of this.kv.list<Deno.KvU64>({ prefix })) {
       const entryTime = entry.key[entry.key.length - 1] as number;
       if (entryTime >= windowStart) {
         count += Number(entry.value?.value ?? 0n);
       }
     }
-    
+
     const allowed = count < config.maxRequests;
-    
+
     if (allowed) {
       // Record this request
       const key = [...prefix, now];
       await this.kv.set(key, new Deno.KvU64(1n), { expireIn: config.windowMs });
     }
-    
+
     return {
       allowed,
       currentCount: allowed ? count + 1 : count,
       maxRequests: config.maxRequests,
       resetTime: config.windowMs,
-      remaining: Math.max(0, config.maxRequests - (allowed ? count + 1 : count)),
+      remaining: Math.max(
+        0,
+        config.maxRequests - (allowed ? count + 1 : count),
+      ),
     };
   }
 
@@ -162,40 +165,40 @@ export class AtomicRateLimit {
   async checkTokenBucket(
     identifier: string,
     config: RateLimitConfig & { refillRate?: number },
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<RateLimitResult> {
     const refillRate = config.refillRate ?? config.maxRequests; // tokens per window
     const refillInterval = config.windowMs / refillRate; // ms per token
-    
+
     const bucketKey = this.getBucketKey(identifier);
     const lastRefillKey = this.getLastRefillKey(identifier);
-    
+
     // Get current tokens and last refill time
     const tokensCounter = AtomicUtils.counter(this.kv, bucketKey);
     const lastRefillCounter = AtomicUtils.counter(this.kv, lastRefillKey);
-    
+
     const currentTokens = Number(await tokensCounter.get());
     const lastRefill = Number(await lastRefillCounter.get());
     const now = timestamp.getTime();
-    
+
     // Calculate tokens to add
     const timeSinceRefill = lastRefill === 0 ? 0 : now - lastRefill;
     const tokensToAdd = Math.floor(timeSinceRefill / refillInterval);
     const newTokens = Math.min(config.maxRequests, currentTokens + tokensToAdd);
-    
+
     // Update bucket if tokens were added
     if (tokensToAdd > 0) {
       await tokensCounter.set(newTokens);
       await lastRefillCounter.set(now);
     }
-    
+
     const allowed = newTokens > 0;
     const finalTokens = allowed ? newTokens - 1 : newTokens;
-    
+
     if (allowed) {
       await tokensCounter.set(finalTokens);
     }
-    
+
     return {
       allowed,
       currentCount: config.maxRequests - finalTokens,
@@ -211,31 +214,35 @@ export class AtomicRateLimit {
   async checkMultiTier(
     identifier: string,
     configs: Array<RateLimitConfig & { name: string }>,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<{ [tierName: string]: RateLimitResult }> {
     const results: { [tierName: string]: RateLimitResult } = {};
-    
+
     for (const config of configs) {
       const result = await this.checkAndIncrement(
         `${identifier}:${config.name}`,
         config,
-        timestamp
+        timestamp,
       );
       results[config.name] = result;
-      
+
       // If any tier blocks the request, we need to rollback the increments
       if (!result.allowed) {
         // Rollback previous increments (this is a simplification)
         for (const prevConfig of configs) {
           if (prevConfig.name === config.name) break;
-          const rollbackKey = this.getWindowKey(`${identifier}:${prevConfig.name}`, prevConfig, timestamp);
+          const rollbackKey = this.getWindowKey(
+            `${identifier}:${prevConfig.name}`,
+            prevConfig,
+            timestamp,
+          );
           const rollbackCounter = AtomicUtils.counter(this.kv, rollbackKey);
           await rollbackCounter.decrement();
         }
         break;
       }
     }
-    
+
     return results;
   }
 
@@ -245,7 +252,7 @@ export class AtomicRateLimit {
   async getStatus(
     identifier: string,
     config: RateLimitConfig,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<RateLimitResult> {
     return await this.check(identifier, config, timestamp);
   }
@@ -256,24 +263,28 @@ export class AtomicRateLimit {
   async cleanup(olderThanMs: number = 24 * 60 * 60 * 1000): Promise<number> {
     const cutoff = Date.now() - olderThanMs;
     let deletedCount = 0;
-    
+
     for await (const entry of this.kv.list({ prefix: [this.namespace] })) {
       // Extract timestamp from key if possible
       const key = entry.key;
       const lastPart = key[key.length - 1];
-      
+
       if (typeof lastPart === "number" && lastPart < cutoff) {
         await this.kv.delete(key);
         deletedCount++;
       }
     }
-    
+
     return deletedCount;
   }
 
   // Private helper methods
 
-  private getWindowKey(identifier: string, config: RateLimitConfig, timestamp: Date): Deno.KvKey {
+  private getWindowKey(
+    identifier: string,
+    config: RateLimitConfig,
+    timestamp: Date,
+  ): Deno.KvKey {
     const windowStart = this.getWindowStart(timestamp, config.windowMs);
     return [this.namespace, "fixed", identifier, config.windowMs, windowStart];
   }
@@ -334,13 +345,13 @@ if (import.meta.main) {
   const userLimit = RateLimitPatterns.perMinute(5); // 5 requests per minute
 
   console.log("Testing rate limit for user123...");
-  
+
   for (let i = 1; i <= 7; i++) {
     const result = await rateLimit.checkAndIncrement("user123", userLimit);
     console.log(`Request ${i}:`, {
       allowed: result.allowed,
       remaining: result.remaining,
-      resetTime: Math.round(result.resetTime / 1000) + "s"
+      resetTime: Math.round(result.resetTime / 1000) + "s",
     });
   }
 

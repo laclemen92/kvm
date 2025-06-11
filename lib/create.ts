@@ -73,7 +73,11 @@ export const create = async <T = unknown>(
           options: processedOptions,
         });
       } else {
-        sets.push({ key: secondaryIndex, value: transformedValue, options: processedOptions });
+        sets.push({
+          key: secondaryIndex,
+          value: transformedValue,
+          options: processedOptions,
+        });
       }
     });
   }
@@ -87,7 +91,9 @@ export const create = async <T = unknown>(
         case "one-to-many" as any: // Backward compatibility
           // Only create relation keys if this entity has the foreign key field
           // This handles child entities that reference a parent (e.g., Product -> Category)
-          const hasForeignKeyFields = relation.fields.every(field => field in transformedValue);
+          const hasForeignKeyFields = relation.fields.every((field) =>
+            field in transformedValue
+          );
           if (hasForeignKeyFields) {
             // Create index for hasMany relations: [parentEntity, foreignKey, childEntity, childId]
             const relationKey = [
@@ -104,7 +110,11 @@ export const create = async <T = unknown>(
                 options: processedOptions,
               });
             } else {
-              sets.push({ key: relationKey, value: transformedValue, options: processedOptions });
+              sets.push({
+                key: relationKey,
+                value: transformedValue,
+                options: processedOptions,
+              });
             }
           }
           break;

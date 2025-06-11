@@ -69,7 +69,7 @@ Deno.test("Upsert Operations - static update by ID throws when not found", async
   await assertRejects(
     () => User.update("nonexistent", { name: "Test" }),
     Error,
-    "users not found by id: nonexistent"
+    "users not found by id: nonexistent",
   );
 
   await kv.close();
@@ -83,7 +83,7 @@ Deno.test("Upsert Operations - upsert creates when not found", async () => {
   const result = await User.upsert(
     { email: "new@example.com" }, // find criteria
     { name: "Updated Name", age: 25 }, // update data (won't be used)
-    { id: "user1", email: "new@example.com", name: "New User", age: 30 } // create data
+    { id: "user1", email: "new@example.com", name: "New User", age: 30 }, // create data
   );
 
   assertEquals(result.name, "New User");
@@ -114,7 +114,12 @@ Deno.test("Upsert Operations - upsert updates when found by email", async () => 
   const result = await User.upsert(
     { email: "existing@example.com" }, // find criteria
     { name: "Updated Name", updatedCount: 1 }, // update data
-    { id: "user2", email: "existing@example.com", name: "Would Create", age: 99 } // create data (won't be used)
+    {
+      id: "user2",
+      email: "existing@example.com",
+      name: "Would Create",
+      age: 99,
+    }, // create data (won't be used)
   );
 
   assertEquals(result.name, "Updated Name");
@@ -145,7 +150,7 @@ Deno.test("Upsert Operations - upsert by primary key", async () => {
   const result = await User.upsert(
     { id: "user1" }, // find by primary key
     { name: "Updated via ID", age: 26 }, // update data
-    { id: "user1", email: "test@example.com", name: "Would Create", age: 99 } // create data (won't be used)
+    { id: "user1", email: "test@example.com", name: "Would Create", age: 99 }, // create data (won't be used)
   );
 
   assertEquals(result.name, "Updated via ID");
@@ -171,18 +176,33 @@ Deno.test("Upsert Operations - upsertMany creates and updates", async () => {
     {
       findCriteria: { email: "existing@example.com" },
       updateData: { name: "Updated Name", age: 21 },
-      createData: { id: "existing", email: "existing@example.com", name: "Updated Name", age: 21 }
+      createData: {
+        id: "existing",
+        email: "existing@example.com",
+        name: "Updated Name",
+        age: 21,
+      },
     },
     {
       findCriteria: { email: "new1@example.com" },
       updateData: { name: "Won't be used" },
-      createData: { id: "new1", email: "new1@example.com", name: "New User 1", age: 25 }
+      createData: {
+        id: "new1",
+        email: "new1@example.com",
+        name: "New User 1",
+        age: 25,
+      },
     },
     {
       findCriteria: { email: "new2@example.com" },
       updateData: { name: "Won't be used" },
-      createData: { id: "new2", email: "new2@example.com", name: "New User 2", age: 30 }
-    }
+      createData: {
+        id: "new2",
+        email: "new2@example.com",
+        name: "New User 2",
+        age: 30,
+      },
+    },
   ]);
 
   assertEquals(result.created.length, 3);
@@ -217,13 +237,23 @@ Deno.test("Upsert Operations - upsertMany with errors and continueOnError", asyn
     {
       findCriteria: { email: "valid@example.com" },
       updateData: { name: "Valid User" },
-      createData: { id: "valid", email: "valid@example.com", name: "Valid User", age: 25 }
+      createData: {
+        id: "valid",
+        email: "valid@example.com",
+        name: "Valid User",
+        age: 25,
+      },
     },
     {
       findCriteria: { email: "invalid@example.com" },
       updateData: { name: "Invalid User" },
-      createData: { id: "invalid", email: "not-an-email", name: "Invalid", age: 25 } // Invalid email
-    }
+      createData: {
+        id: "invalid",
+        email: "not-an-email",
+        name: "Invalid",
+        age: 25,
+      }, // Invalid email
+    },
   ], { continueOnError: true });
 
   assertEquals(result.created.length, 1);
@@ -255,7 +285,7 @@ Deno.test("Upsert Operations - upsert by multiple criteria", async () => {
   const result = await User.upsert(
     { name: "John Doe", age: 30 }, // find by multiple fields
     { name: "John Updated" }, // update data
-    { id: "user2", email: "test2@example.com", name: "John New", age: 30 } // create data (won't be used)
+    { id: "user2", email: "test2@example.com", name: "John New", age: 30 }, // create data (won't be used)
   );
 
   assertEquals(result.name, "John Updated");

@@ -5,7 +5,7 @@
 
 import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
 import { ulid } from "@std/ulid";
-import type { KVMEntity, Key, SecondaryIndex, Relation } from "./types.ts";
+import type { Key, KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
 import { createModelClass } from "./model.ts";
 import type { ModelConstructor } from "./model-types.ts";
@@ -39,7 +39,9 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
    */
   ulid(): this {
     // Add ULID generation as default
-    this.zodType = this.zodType.default(() => this.generateULID()) as unknown as T;
+    this.zodType = this.zodType.default(() =>
+      this.generateULID()
+    ) as unknown as T;
     return this;
   }
 
@@ -72,7 +74,7 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
    */
   required(): this {
     // Remove optional if it exists
-    if ('_def' in this.zodType && 'innerType' in this.zodType._def) {
+    if ("_def" in this.zodType && "innerType" in this.zodType._def) {
       this.zodType = this.zodType._def.innerType as unknown as T;
     }
     return this;
@@ -140,7 +142,9 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
    */
   lowercase(): this {
     if (this.zodType instanceof z.ZodString) {
-      this.zodType = this.zodType.transform(val => val.toLowerCase()) as unknown as T;
+      this.zodType = this.zodType.transform((val) =>
+        val.toLowerCase()
+      ) as unknown as T;
     }
     return this;
   }
@@ -150,7 +154,9 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
    */
   uppercase(): this {
     if (this.zodType instanceof z.ZodString) {
-      this.zodType = this.zodType.transform(val => val.toUpperCase()) as unknown as T;
+      this.zodType = this.zodType.transform((val) =>
+        val.toUpperCase()
+      ) as unknown as T;
     }
     return this;
   }
@@ -174,7 +180,10 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
  * Fluent field chain that supports both field modifiers and model builder chaining
  */
 export class FluentFieldChain {
-  constructor(private builder: FluentModelBuilder, private fieldBuilder: FieldBuilder) {}
+  constructor(
+    private builder: FluentModelBuilder,
+    private fieldBuilder: FieldBuilder,
+  ) {}
 
   // Field modifier methods that return the chain for continued field modification
   primaryKey(): this {
@@ -259,7 +268,10 @@ export class FluentFieldChain {
     return this.builder.date(name);
   }
 
-  enum<T extends [string, ...string[]]>(name: string, values: T): FluentFieldChain {
+  enum<T extends [string, ...string[]]>(
+    name: string,
+    values: T,
+  ): FluentFieldChain {
     return this.builder.enum(name, values);
   }
 
@@ -280,12 +292,15 @@ export class FluentFieldChain {
     return this.builder.timestamps();
   }
 
-  addModelIndex(fieldName: string, options?: { unique?: boolean; valueType?: ValueType }): FluentModelBuilder {
+  addModelIndex(
+    fieldName: string,
+    options?: { unique?: boolean; valueType?: ValueType },
+  ): FluentModelBuilder {
     return this.builder.index(fieldName, options);
   }
 
-  hasMany(relationName: string, options: { 
-    foreignKey: string; 
+  hasMany(relationName: string, options: {
+    foreignKey: string;
     through?: string;
     cascade?: boolean;
   }): FluentModelBuilder {
@@ -365,8 +380,8 @@ export class FluentModelBuilder {
     // Accept Date objects and convert to ISO strings for storage in Deno KV
     const dateSchema = z.union([
       z.date(),
-      z.string().datetime().transform(str => new Date(str))
-    ]).transform(val => {
+      z.string().datetime().transform((str) => new Date(str)),
+    ]).transform((val) => {
       // Convert input to Date if it's a string, then store as ISO string
       const date = val instanceof Date ? val : new Date(val);
       return date.toISOString();
@@ -380,7 +395,10 @@ export class FluentModelBuilder {
   /**
    * Add an enum field
    */
-  enum<T extends [string, ...string[]]>(name: string, values: T): FluentFieldChain {
+  enum<T extends [string, ...string[]]>(
+    name: string,
+    values: T,
+  ): FluentFieldChain {
     const field = new FieldBuilder(name, z.enum(values));
     this.fields.set(name, field);
     this.currentField = field;
@@ -422,27 +440,32 @@ export class FluentModelBuilder {
    */
   timestamps(): this {
     this.hasTimestamps = true;
-    
+
     // Add createdAt field (store as ISO string)
-    const createdAtField = new FieldBuilder("createdAt", 
-      z.string().datetime().default(() => new Date().toISOString())
+    const createdAtField = new FieldBuilder(
+      "createdAt",
+      z.string().datetime().default(() => new Date().toISOString()),
     );
     createdAtField.immutable();
     this.fields.set("createdAt", createdAtField);
-    
+
     // Add updatedAt field (store as ISO string)
-    const updatedAtField = new FieldBuilder("updatedAt", 
-      z.string().datetime().default(() => new Date().toISOString())
+    const updatedAtField = new FieldBuilder(
+      "updatedAt",
+      z.string().datetime().default(() => new Date().toISOString()),
     );
     this.fields.set("updatedAt", updatedAtField);
-    
+
     return this;
   }
 
   /**
    * Add a secondary index
    */
-  index(fieldName: string, options?: { unique?: boolean; valueType?: ValueType }): this {
+  index(
+    fieldName: string,
+    options?: { unique?: boolean; valueType?: ValueType },
+  ): this {
     this.secondaryIndexes.push({
       name: `${this.modelName}_by_${fieldName}`,
       key: [{ name: this.modelName, key: fieldName }],
@@ -455,8 +478,8 @@ export class FluentModelBuilder {
   /**
    * Add a relation to another model
    */
-  hasMany(relationName: string, options: { 
-    foreignKey: string; 
+  hasMany(relationName: string, options: {
+    foreignKey: string;
     through?: string;
     cascade?: boolean;
   }): this {
@@ -549,7 +572,9 @@ export class FluentModelBuilder {
       name: this.modelName,
       primaryKey,
       schema,
-      secondaryIndexes: this.secondaryIndexes.length > 0 ? this.secondaryIndexes : undefined,
+      secondaryIndexes: this.secondaryIndexes.length > 0
+        ? this.secondaryIndexes
+        : undefined,
       relations: this.relations.length > 0 ? this.relations : undefined,
     };
 

@@ -1,4 +1,7 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertRejects,
+} from "https://deno.land/std@0.220.0/assert/mod.ts";
 import { KVMMigrationUtils } from "./migration-utils.ts";
 
 Deno.test("KVMMigrationUtils.addField", async () => {
@@ -235,7 +238,10 @@ Deno.test("KVMMigrationUtils.batchProcess", async () => {
 
   // Add test data
   for (let i = 1; i <= 25; i++) {
-    await kv.set(["users", i.toString()], { id: i.toString(), name: `User ${i}` });
+    await kv.set(["users", i.toString()], {
+      id: i.toString(),
+      name: `User ${i}`,
+    });
   }
 
   // Process in batches
@@ -248,7 +254,7 @@ Deno.test("KVMMigrationUtils.batchProcess", async () => {
       batchSizes.push(records.length);
       totalProcessed += records.length;
     },
-    10 // batch size
+    10, // batch size
   );
 
   // Should have 3 batches: 10, 10, 5
@@ -326,7 +332,7 @@ Deno.test("KVMMigrationUtils.restoreEntity", async () => {
   await assertRejects(
     () => utils.restoreEntity("users", "non_existent"),
     Error,
-    "Backup non_existent not found or empty"
+    "Backup non_existent not found or empty",
   );
 
   await kv.close();
@@ -341,13 +347,13 @@ Deno.test("KVMMigrationUtils.listBackups", async () => {
   await kv.set(["posts", "1"], { id: "1", title: "Post 1" });
 
   await utils.backupEntity("users", "backup1");
-  await new Promise(resolve => setTimeout(resolve, 10)); // Small delay
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Small delay
   await utils.backupEntity("posts", "backup2");
 
   // List backups
   const backups = await utils.listBackups();
   assertEquals(backups.length, 2);
-  
+
   // Should be sorted by creation date (newest first)
   assertEquals(backups[0].backupName, "backup2");
   assertEquals(backups[0].originalEntity, "posts");

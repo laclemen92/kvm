@@ -13,22 +13,29 @@ export class KVMMigrationUtils implements MigrationUtils {
   /**
    * Add a new field to all records of an entity
    */
-  async addField(entityName: string, fieldName: string, defaultValue: any): Promise<void> {
+  async addField(
+    entityName: string,
+    fieldName: string,
+    defaultValue: any,
+  ): Promise<void> {
     await this.batchProcess(
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
           // Only add field if it doesn't exist
-          if (record.value && typeof record.value === 'object' && !(fieldName in record.value)) {
+          if (
+            record.value && typeof record.value === "object" &&
+            !(fieldName in record.value)
+          ) {
             atomic.set(record.key, {
               ...record.value,
               [fieldName]: defaultValue,
             });
           }
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
           throw new Error(`Failed to add field ${fieldName} to ${entityName}`);
@@ -45,17 +52,22 @@ export class KVMMigrationUtils implements MigrationUtils {
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
-          if (record.value && typeof record.value === 'object' && fieldName in record.value) {
+          if (
+            record.value && typeof record.value === "object" &&
+            fieldName in record.value
+          ) {
             const { [fieldName]: removed, ...rest } = record.value;
             atomic.set(record.key, rest);
           }
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
-          throw new Error(`Failed to remove field ${fieldName} from ${entityName}`);
+          throw new Error(
+            `Failed to remove field ${fieldName} from ${entityName}`,
+          );
         }
       },
     );
@@ -64,14 +76,21 @@ export class KVMMigrationUtils implements MigrationUtils {
   /**
    * Rename a field in all records of an entity
    */
-  async renameField(entityName: string, oldName: string, newName: string): Promise<void> {
+  async renameField(
+    entityName: string,
+    oldName: string,
+    newName: string,
+  ): Promise<void> {
     await this.batchProcess(
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
-          if (record.value && typeof record.value === 'object' && oldName in record.value) {
+          if (
+            record.value && typeof record.value === "object" &&
+            oldName in record.value
+          ) {
             const { [oldName]: value, ...rest } = record.value;
             atomic.set(record.key, {
               ...rest,
@@ -79,10 +98,12 @@ export class KVMMigrationUtils implements MigrationUtils {
             });
           }
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
-          throw new Error(`Failed to rename field ${oldName} to ${newName} in ${entityName}`);
+          throw new Error(
+            `Failed to rename field ${oldName} to ${newName} in ${entityName}`,
+          );
         }
       },
     );
@@ -100,20 +121,28 @@ export class KVMMigrationUtils implements MigrationUtils {
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
-          if (record.value && typeof record.value === 'object' && fieldName in record.value) {
-            const transformedValue = transformer(record.value[fieldName], record.value);
+          if (
+            record.value && typeof record.value === "object" &&
+            fieldName in record.value
+          ) {
+            const transformedValue = transformer(
+              record.value[fieldName],
+              record.value,
+            );
             atomic.set(record.key, {
               ...record.value,
               [fieldName]: transformedValue,
             });
           }
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
-          throw new Error(`Failed to transform field ${fieldName} in ${entityName}`);
+          throw new Error(
+            `Failed to transform field ${fieldName} in ${entityName}`,
+          );
         }
       },
     );
@@ -124,7 +153,7 @@ export class KVMMigrationUtils implements MigrationUtils {
    */
   async copyEntity(sourceEntity: string, targetEntity: string): Promise<void> {
     const sourceRecords: Array<{ key: Deno.KvKey; value: any }> = [];
-    
+
     // Collect all source records
     for await (const entry of this.kv.list({ prefix: [sourceEntity] })) {
       sourceRecords.push({ key: entry.key, value: entry.value });
@@ -135,16 +164,18 @@ export class KVMMigrationUtils implements MigrationUtils {
       sourceEntity,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
           // Create new key with target entity prefix
           const newKey = [targetEntity, ...record.key.slice(1)];
           atomic.set(newKey, record.value);
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
-          throw new Error(`Failed to copy from ${sourceEntity} to ${targetEntity}`);
+          throw new Error(
+            `Failed to copy from ${sourceEntity} to ${targetEntity}`,
+          );
         }
       },
     );
@@ -156,7 +187,7 @@ export class KVMMigrationUtils implements MigrationUtils {
   async renameEntity(oldName: string, newName: string): Promise<void> {
     // First copy to new name
     await this.copyEntity(oldName, newName);
-    
+
     // Then delete old entity
     await this.truncateEntity(oldName);
   }
@@ -169,11 +200,11 @@ export class KVMMigrationUtils implements MigrationUtils {
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
           atomic.delete(record.key);
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
           throw new Error(`Failed to truncate entity ${entityName}`);
@@ -198,7 +229,7 @@ export class KVMMigrationUtils implements MigrationUtils {
    */
   async fieldExists(entityName: string, fieldName: string): Promise<boolean> {
     for await (const entry of this.kv.list({ prefix: [entityName] })) {
-      if (entry.value && typeof entry.value === 'object') {
+      if (entry.value && typeof entry.value === "object") {
         return fieldName in entry.value;
       }
     }
@@ -210,20 +241,22 @@ export class KVMMigrationUtils implements MigrationUtils {
    */
   async batchProcess(
     entityName: string,
-    processor: (records: Array<{ key: Deno.KvKey; value: any }>) => Promise<void>,
+    processor: (
+      records: Array<{ key: Deno.KvKey; value: any }>,
+    ) => Promise<void>,
     batchSize: number = 100,
   ): Promise<void> {
     let batch: Array<{ key: Deno.KvKey; value: any }> = [];
-    
+
     for await (const entry of this.kv.list({ prefix: [entityName] })) {
       batch.push({ key: entry.key, value: entry.value });
-      
+
       if (batch.length >= batchSize) {
         await processor(batch);
         batch = [];
       }
     }
-    
+
     // Process remaining items
     if (batch.length > 0) {
       await processor(batch);
@@ -234,11 +267,11 @@ export class KVMMigrationUtils implements MigrationUtils {
    * Create a backup of an entity before migration
    */
   async backupEntity(entityName: string, backupName?: string): Promise<string> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const finalBackupName = backupName ?? `${entityName}_backup_${timestamp}`;
-    
+
     await this.copyEntity(entityName, `__backups_${finalBackupName}`);
-    
+
     // Store backup metadata
     const backupMeta = {
       originalEntity: entityName,
@@ -246,9 +279,9 @@ export class KVMMigrationUtils implements MigrationUtils {
       createdAt: new Date(),
       recordCount: await this.countRecords(entityName),
     };
-    
-    await this.kv.set(['__backup_meta', finalBackupName], backupMeta);
-    
+
+    await this.kv.set(["__backup_meta", finalBackupName], backupMeta);
+
     return finalBackupName;
   }
 
@@ -257,16 +290,16 @@ export class KVMMigrationUtils implements MigrationUtils {
    */
   async restoreEntity(entityName: string, backupName: string): Promise<void> {
     const backupEntityName = `__backups_${backupName}`;
-    
+
     // Check if backup exists
     const backupCount = await this.countRecords(backupEntityName);
     if (backupCount === 0) {
       throw new Error(`Backup ${backupName} not found or empty`);
     }
-    
+
     // Clear current entity
     await this.truncateEntity(entityName);
-    
+
     // Restore from backup
     await this.copyEntity(backupEntityName, entityName);
   }
@@ -274,21 +307,25 @@ export class KVMMigrationUtils implements MigrationUtils {
   /**
    * List all available backups
    */
-  async listBackups(): Promise<Array<{
-    backupName: string;
-    originalEntity: string;
-    createdAt: Date;
-    recordCount: number;
-  }>> {
+  async listBackups(): Promise<
+    Array<{
+      backupName: string;
+      originalEntity: string;
+      createdAt: Date;
+      recordCount: number;
+    }>
+  > {
     const backups: Array<any> = [];
-    
-    for await (const entry of this.kv.list({ prefix: ['__backup_meta'] })) {
+
+    for await (const entry of this.kv.list({ prefix: ["__backup_meta"] })) {
       if (entry.value) {
         backups.push(entry.value);
       }
     }
-    
-    return backups.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return backups.sort((a, b) =>
+      b.createdAt.getTime() - a.createdAt.getTime()
+    );
   }
 
   /**
@@ -296,12 +333,12 @@ export class KVMMigrationUtils implements MigrationUtils {
    */
   async deleteBackup(backupName: string): Promise<void> {
     const backupEntityName = `__backups_${backupName}`;
-    
+
     // Delete backup data
     await this.truncateEntity(backupEntityName);
-    
+
     // Delete backup metadata
-    await this.kv.delete(['__backup_meta', backupName]);
+    await this.kv.delete(["__backup_meta", backupName]);
   }
 
   /**
@@ -313,25 +350,30 @@ export class KVMMigrationUtils implements MigrationUtils {
     indexName?: string,
   ): Promise<void> {
     const finalIndexName = indexName ?? `${entityName}_by_${fieldName}`;
-    
+
     await this.batchProcess(
       entityName,
       async (records) => {
         const atomic = this.kv.atomic();
-        
+
         for (const record of records) {
-          if (record.value && typeof record.value === 'object' && fieldName in record.value) {
+          if (
+            record.value && typeof record.value === "object" &&
+            fieldName in record.value
+          ) {
             const fieldValue = record.value[fieldName];
             const indexKey = [finalIndexName, fieldValue];
-            
+
             // Store reference to the main record
             atomic.set(indexKey, record.key);
           }
         }
-        
+
         const result = await atomic.commit();
         if (!result.ok) {
-          throw new Error(`Failed to create index ${finalIndexName} on ${entityName}.${fieldName}`);
+          throw new Error(
+            `Failed to create index ${finalIndexName} on ${entityName}.${fieldName}`,
+          );
         }
       },
     );
@@ -360,7 +402,7 @@ export class KVMMigrationUtils implements MigrationUtils {
     for await (const entry of this.kv.list({ prefix: [] })) {
       if (Array.isArray(entry.key) && entry.key.length > 0) {
         const entityName = entry.key[0] as string;
-        if (!entityName.startsWith('__')) { // Skip internal keys
+        if (!entityName.startsWith("__")) { // Skip internal keys
           entityNames.add(entityName);
         }
       }

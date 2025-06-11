@@ -6,9 +6,7 @@ import type {
   AppliedMigration,
   MigrationStorageConfig,
 } from "./migration-types.ts";
-import {
-  MigrationStateError,
-} from "./migration-types.ts";
+import { MigrationStateError } from "./migration-types.ts";
 
 /**
  * Handles storage and retrieval of migration metadata in Deno KV
@@ -24,7 +22,8 @@ export class MigrationStorage {
   ) {
     this.keyPrefix = config.keyPrefix ?? ["__migrations"];
     this.versionKey = config.versionKey ?? [...this.keyPrefix, "version"];
-    this.appliedMigrationsPrefix = config.appliedMigrationsPrefix ?? [...this.keyPrefix, "applied"];
+    this.appliedMigrationsPrefix = config.appliedMigrationsPrefix ??
+      [...this.keyPrefix, "applied"];
   }
 
   /**
@@ -63,10 +62,12 @@ export class MigrationStorage {
    */
   async getAppliedMigrations(): Promise<AppliedMigration[]> {
     const migrations: AppliedMigration[] = [];
-    
-    for await (const entry of this.kv.list<AppliedMigration>({
-      prefix: this.appliedMigrationsPrefix,
-    })) {
+
+    for await (
+      const entry of this.kv.list<AppliedMigration>({
+        prefix: this.appliedMigrationsPrefix,
+      })
+    ) {
       if (entry.value) {
         migrations.push(entry.value);
       }
@@ -114,22 +115,22 @@ export class MigrationStorage {
     migration: AppliedMigration,
   ): Promise<void> {
     const atomic = this.kv.atomic();
-    
+
     // Get current version entry to check its versionstamp
     const currentVersionEntry = await this.kv.get(this.versionKey);
-    
+
     // Check that current version is what we expect
     atomic.check(currentVersionEntry);
-    
+
     // Update version
     atomic.set(this.versionKey, toVersion);
-    
+
     // Record applied migration
     const migrationKey = [...this.appliedMigrationsPrefix, migration.version];
     atomic.set(migrationKey, migration);
-    
+
     const result = await atomic.commit();
-    
+
     if (!result.ok) {
       throw new MigrationStateError(
         `Failed to apply migration ${migration.version}: version conflict`,
@@ -148,20 +149,20 @@ export class MigrationStorage {
     migrationVersion: number,
   ): Promise<void> {
     const atomic = this.kv.atomic();
-    
+
     // Check that current version is what we expect
     const versionCheck = await this.kv.get(this.versionKey);
     atomic.check(versionCheck);
-    
+
     // Update version
     atomic.set(this.versionKey, toVersion);
-    
+
     // Remove applied migration record
     const migrationKey = [...this.appliedMigrationsPrefix, migrationVersion];
     atomic.delete(migrationKey);
-    
+
     const result = await atomic.commit();
-    
+
     if (!result.ok) {
       throw new MigrationStateError(
         `Failed to rollback migration ${migrationVersion}: version conflict`,
@@ -182,7 +183,7 @@ export class MigrationStorage {
   }> {
     const currentVersion = await this.getCurrentVersion();
     const appliedMigrations = await this.getAppliedMigrations();
-    
+
     const stats = {
       currentVersion,
       totalAppliedMigrations: appliedMigrations.length,
@@ -192,7 +193,8 @@ export class MigrationStorage {
 
     if (appliedMigrations.length > 0) {
       stats.firstMigrationDate = appliedMigrations[0].appliedAt;
-      stats.lastMigrationDate = appliedMigrations[appliedMigrations.length - 1].appliedAt;
+      stats.lastMigrationDate =
+        appliedMigrations[appliedMigrations.length - 1].appliedAt;
     }
 
     return stats;
@@ -204,9 +206,11 @@ export class MigrationStorage {
   async clear(): Promise<void> {
     // Delete version
     await this.kv.delete(this.versionKey);
-    
+
     // Delete all applied migrations
-    for await (const entry of this.kv.list({ prefix: this.appliedMigrationsPrefix })) {
+    for await (
+      const entry of this.kv.list({ prefix: this.appliedMigrationsPrefix })
+    ) {
       await this.kv.delete(entry.key);
     }
   }
@@ -224,7 +228,9 @@ export class MigrationStorage {
 
     // Check version consistency
     if (appliedMigrations.length > 0) {
-      const highestApplied = Math.max(...appliedMigrations.map(m => m.version));
+      const highestApplied = Math.max(
+        ...appliedMigrations.map((m) => m.version),
+      );
       if (currentVersion !== highestApplied) {
         errors.push(
           `Version mismatch: current version is ${currentVersion} but highest applied migration is ${highestApplied}`,
@@ -237,11 +243,15 @@ export class MigrationStorage {
     }
 
     // Check for gaps in migration sequence
-    const versions = appliedMigrations.map(m => m.version).sort((a, b) => a - b);
+    const versions = appliedMigrations.map((m) => m.version).sort((a, b) =>
+      a - b
+    );
     for (let i = 1; i < versions.length; i++) {
       if (versions[i] !== versions[i - 1] + 1) {
         errors.push(
-          `Gap in migration sequence between version ${versions[i - 1]} and ${versions[i]}`,
+          `Gap in migration sequence between version ${versions[i - 1]} and ${
+            versions[i]
+          }`,
         );
       }
     }

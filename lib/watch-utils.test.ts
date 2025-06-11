@@ -1,4 +1,7 @@
-import { assertEquals, assertInstanceOf } from "https://deno.land/std@0.220.0/assert/mod.ts";
+import {
+  assertEquals,
+  assertInstanceOf,
+} from "https://deno.land/std@0.220.0/assert/mod.ts";
 import { WatchUtils } from "./watch-utils.ts";
 import { WatchEventType } from "./watch-types.ts";
 import type { WatchEvent } from "./watch-types.ts";
@@ -12,7 +15,7 @@ Deno.test("WatchUtils.createEvent", () => {
     { id: "123", name: "John" },
     "v1",
     "users",
-    null
+    null,
   );
 
   assertEquals(event.type, WatchEventType.CREATED);
@@ -28,35 +31,38 @@ Deno.test("WatchUtils.determineEventType", () => {
   // Initial event
   assertEquals(
     WatchUtils.determineEventType({ id: "1" }, null, true),
-    WatchEventType.INITIAL
+    WatchEventType.INITIAL,
   );
 
   // Created event
   assertEquals(
     WatchUtils.determineEventType({ id: "1" }, null, false),
-    WatchEventType.CREATED
+    WatchEventType.CREATED,
   );
 
   // Deleted event
   assertEquals(
     WatchUtils.determineEventType(null, { id: "1" }, false),
-    WatchEventType.DELETED
+    WatchEventType.DELETED,
   );
 
   // Updated event
   assertEquals(
-    WatchUtils.determineEventType({ id: "1", name: "Updated" }, { id: "1", name: "Original" }, false),
-    WatchEventType.UPDATED
+    WatchUtils.determineEventType({ id: "1", name: "Updated" }, {
+      id: "1",
+      name: "Original",
+    }, false),
+    WatchEventType.UPDATED,
   );
 
   // Handle undefined as null
   assertEquals(
     WatchUtils.determineEventType(undefined as any, null, false),
-    WatchEventType.UPDATED
+    WatchEventType.UPDATED,
   );
   assertEquals(
     WatchUtils.determineEventType({ id: "1" }, undefined as any, false),
-    WatchEventType.CREATED
+    WatchEventType.CREATED,
   );
 });
 
@@ -168,7 +174,8 @@ Deno.test("WatchUtils.filterStream", async () => {
   // Filter only active users
   const filteredStream = WatchUtils.filterStream(
     stream,
-    (event: WatchEvent<{ id: string; status: string }>) => event.value?.status === "active"
+    (event: WatchEvent<{ id: string; status: string }>) =>
+      event.value?.status === "active",
   );
 
   const reader = filteredStream.getReader();
@@ -221,8 +228,10 @@ Deno.test("WatchUtils.mapStream", async () => {
     stream,
     (event: WatchEvent<{ id: string; name: string }>) => ({
       ...event,
-      value: event.value ? { ...event.value, name: event.value.name.toUpperCase() } : null,
-    })
+      value: event.value
+        ? { ...event.value, name: event.value.name.toUpperCase() }
+        : null,
+    }),
   );
 
   const reader = mappedStream.getReader();
@@ -275,7 +284,7 @@ Deno.test("WatchUtils.debounceStream", async () => {
       for (let i = 0; i < events.length; i++) {
         controller.enqueue(events[i]);
         if (i < events.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
         }
       }
       controller.close();
@@ -354,7 +363,7 @@ Deno.test("WatchUtils.mergeStreams", async () => {
   }
 
   assertEquals(results.length, 2);
-  const models = results.map(r => r.modelName).sort();
+  const models = results.map((r) => r.modelName).sort();
   assertEquals(models, ["posts", "users"]);
 });
 
@@ -435,7 +444,7 @@ Deno.test("WatchUtils.createWebSocketHandler", async () => {
   };
 
   handler(mockSocket as any);
-  
+
   // Trigger onopen
   if (mockSocket.onopen) {
     mockSocket.onopen();

@@ -32,7 +32,7 @@ function defaultShouldRetry(error: Error, attempt: number): boolean {
  * Sleep utility for retry delays
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -83,30 +83,35 @@ export async function enhancedCreateMany<T>(
           // This is a retry
           retryCount = attempt;
           result.stats.retried++;
-          
+
           if (onRetry) {
             await onRetry(lastError!, attempt, item);
           }
-          
+
           if (retryDelay > 0) {
             await sleep(retryDelay);
           }
         }
 
         const createResult = await create<T>(entity, kv, item, options);
-        
+
         if (createResult?.value) {
           result.created.push(createResult.value);
           result.stats.created++;
-          
+
           // Track for potential rollback
           if (rollbackOnAnyFailure && !atomic) {
             // Extract the primary key value from the created item for rollback
-            const primaryKeyDef = entity.primaryKey.find(pk => pk.key);
-            const primaryKeyValue = primaryKeyDef ? (createResult.value as any)[primaryKeyDef.key!] : createResult.value;
-            createdItems.push({ data: createResult.value, key: primaryKeyValue });
+            const primaryKeyDef = entity.primaryKey.find((pk) => pk.key);
+            const primaryKeyValue = primaryKeyDef
+              ? (createResult.value as any)[primaryKeyDef.key!]
+              : createResult.value;
+            createdItems.push({
+              data: createResult.value,
+              key: primaryKeyValue,
+            });
           }
-          
+
           success = true;
           break;
         } else {
@@ -114,7 +119,7 @@ export async function enhancedCreateMany<T>(
         }
       } catch (error) {
         lastError = error as Error;
-        
+
         // Check if we should retry
         if (attempt < maxRetries && shouldRetry(lastError, attempt + 1)) {
           continue; // Try again
@@ -141,14 +146,16 @@ export async function enhancedCreateMany<T>(
         // Rollback all successful operations
         for (const createdItem of createdItems) {
           try {
-            await deleteKey(entity, kv, createdItem.key, { cascadeDelete: false });
+            await deleteKey(entity, kv, createdItem.key, {
+              cascadeDelete: false,
+            });
             result.stats.rolledBack++;
           } catch (rollbackError) {
             // Log rollback errors but don't fail the operation
             console.warn(`Rollback failed for item:`, rollbackError);
           }
         }
-        
+
         // Clear created items since they were rolled back
         result.created = [];
         result.stats.created = 0;
@@ -215,7 +222,10 @@ export async function enhancedUpdateMany<T>(
         const existing = await findUnique<T>(entity, kv, updateItem.key);
         if (existing?.value) {
           originalValue = existing.value;
-          originalValues.push({ key: updateItem.key, originalData: existing.value });
+          originalValues.push({
+            key: updateItem.key,
+            originalData: existing.value,
+          });
         }
       } catch (error) {
         // If we can't find the original, we can't rollback
@@ -228,18 +238,24 @@ export async function enhancedUpdateMany<T>(
         if (attempt > 0) {
           retryCount = attempt;
           result.stats.retried++;
-          
+
           if (onRetry) {
             await onRetry(lastError!, attempt, updateItem);
           }
-          
+
           if (retryDelay > 0) {
             await sleep(retryDelay);
           }
         }
 
-        const updateResult = await update<T>(entity, kv, updateItem.key, updateItem.data, options);
-        
+        const updateResult = await update<T>(
+          entity,
+          kv,
+          updateItem.key,
+          updateItem.data,
+          options,
+        );
+
         if (updateResult?.value) {
           result.updated.push(updateResult.value);
           result.stats.updated++;
@@ -262,7 +278,7 @@ export async function enhancedUpdateMany<T>(
         }
       } catch (error) {
         lastError = error as Error;
-        
+
         // Check if it's a "not found" error
         if (lastError.message === "Record not found") {
           result.notFound.push({
@@ -273,7 +289,7 @@ export async function enhancedUpdateMany<T>(
           success = true; // Not an error, just not found
           break;
         }
-        
+
         if (attempt < maxRetries && shouldRetry(lastError, attempt + 1)) {
           continue;
         } else {
@@ -299,13 +315,19 @@ export async function enhancedUpdateMany<T>(
         // Rollback all previous updates
         for (const originalItem of originalValues) {
           try {
-            await update<T>(entity, kv, originalItem.key, originalItem.originalData, options);
+            await update<T>(
+              entity,
+              kv,
+              originalItem.key,
+              originalItem.originalData,
+              options,
+            );
             result.stats.rolledBack++;
           } catch (rollbackError) {
             console.warn(`Rollback failed for item:`, rollbackError);
           }
         }
-        
+
         // Clear updated items since they were rolled back
         result.updated = [];
         result.stats.updated = 0;
@@ -362,7 +384,9 @@ export async function enhancedDeleteMany<T>(
   // Process each deletion with retry logic
   for (let i = 0; i < keys.length; i++) {
     const keyItem = keys[i];
-    const keyToDelete = typeof keyItem === 'object' && 'key' in keyItem ? keyItem.key : keyItem;
+    const keyToDelete = typeof keyItem === "object" && "key" in keyItem
+      ? keyItem.key
+      : keyItem;
     let lastError: Error | null = null;
     let success = false;
     let retryCount = 0;
@@ -386,39 +410,41 @@ export async function enhancedDeleteMany<T>(
         if (attempt > 0) {
           retryCount = attempt;
           result.stats.retried++;
-          
+
           if (onRetry) {
             await onRetry(lastError!, attempt, keyItem);
           }
-          
+
           if (retryDelay > 0) {
             await sleep(retryDelay);
           }
         }
 
-        await deleteKey(entity, kv, keyToDelete, { 
-          cascadeDelete: options.cascadeDelete ?? false 
+        await deleteKey(entity, kv, keyToDelete, {
+          cascadeDelete: options.cascadeDelete ?? false,
         });
-        
+
         if (originalValue) {
           if (returnDeletedItems) {
             result.deleted.push(originalValue);
           }
           if (rollbackOnAnyFailure && !atomic) {
-            deletedItems.push({ key: keyToDelete, originalData: originalValue });
+            deletedItems.push({
+              key: keyToDelete,
+              originalData: originalValue,
+            });
           }
         }
-        
+
         result.deletedCount++;
         result.stats.deleted++;
         success = true;
         break;
-        
       } catch (error) {
         lastError = error as Error;
-        
+
         // Check if item was not found (not an error for deletion)
-        if ((error as Error).message.includes('not found')) {
+        if ((error as Error).message.includes("not found")) {
           result.notFound.push({
             key: keyToDelete,
             index: i,
@@ -427,7 +453,7 @@ export async function enhancedDeleteMany<T>(
           success = true;
           break;
         }
-        
+
         if (attempt < maxRetries && shouldRetry(lastError, attempt + 1)) {
           continue;
         } else {
@@ -458,7 +484,7 @@ export async function enhancedDeleteMany<T>(
             console.warn(`Rollback failed for item:`, rollbackError);
           }
         }
-        
+
         // Clear deleted items since they were rolled back
         result.deleted = [];
         result.deletedCount = 0;

@@ -20,7 +20,7 @@ export const isStringKeyedValueObject = (
 };
 
 export const isDenoKvKey = (
-  value: unknown
+  value: unknown,
 ): value is Deno.KvKey => {
   return Array.isArray(value) && value.every(isDenoKvKeyPart);
 };

@@ -667,7 +667,7 @@ describe("Batch Operations", () => {
 
       try {
         const result = await User.updateMany([
-          { key: "non-existent", data: { name: "Should not fail" } }
+          { key: "non-existent", data: { name: "Should not fail" } },
         ], { continueOnError: true });
 
         // If no error is thrown, check the result structure

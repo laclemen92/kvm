@@ -112,7 +112,7 @@ export async function list<T = unknown>(
           } else if (typeof nextKey[lastIdx] === "number") {
             nextKey[lastIdx] = nextKey[lastIdx] + 1;
           }
-          
+
           selector = {
             start: nextKey,
             end: [...prefix, "\uFFFF"], // End at the end of the prefix range
@@ -134,7 +134,7 @@ export async function list<T = unknown>(
   // Determine if there are more results and create cursor
   const requestedLimit = options?.limit || 100;
   const hasMoreResults = results.length === requestedLimit;
-  
+
   let nextCursor: string | undefined;
   if (hasMoreResults && results.length > 0) {
     // Only provide cursor if we got exactly the limit (might have more)

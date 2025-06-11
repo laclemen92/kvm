@@ -60,14 +60,20 @@ export const update = async <T = unknown>(
   }
 
   const operation = kv.atomic();
-  operation.set(pk, transformedValueToUpdate, processedOptions as { expireIn?: number });
+  operation.set(
+    pk,
+    transformedValueToUpdate,
+    processedOptions as { expireIn?: number },
+  );
 
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
       if (secondaryIndexDef.valueType === ValueType.VALUE) {
         // Check if all required fields for the secondary index exist
         const hasAllFields = secondaryIndexDef.key.every((keyPart) => {
-          if (keyPart.key && isStringKeyedValueObject(transformedValueToUpdate)) {
+          if (
+            keyPart.key && isStringKeyedValueObject(transformedValueToUpdate)
+          ) {
             return transformedValueToUpdate[keyPart.key] !== undefined;
           }
           return true;

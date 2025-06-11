@@ -242,7 +242,10 @@ Deno.test("Model list operations - streaming large datasets", async () => {
   // Add timeout to prevent hanging
   let timeoutId: number | undefined;
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error("Stream test timed out after 5 seconds")), 5000);
+    timeoutId = setTimeout(
+      () => reject(new Error("Stream test timed out after 5 seconds")),
+      5000,
+    );
   });
 
   const streamPromise = (async () => {

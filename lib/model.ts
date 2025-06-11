@@ -916,8 +916,20 @@ export function createModelClass<T = any>(
         );
 
         const result = hasRetryOptions
-          ? await enhancedCreateMany<T>(this.entity, this.kv, data, options, modelName)
-          : await batchCreate<T>(this.entity, this.kv, data, options, modelName);
+          ? await enhancedCreateMany<T>(
+            this.entity,
+            this.kv,
+            data,
+            options,
+            modelName,
+          )
+          : await batchCreate<T>(
+            this.entity,
+            this.kv,
+            data,
+            options,
+            modelName,
+          );
 
         // Convert created items to model instances
         const convertedResult: BatchCreateResult<DynamicModel & T> = {
@@ -955,8 +967,20 @@ export function createModelClass<T = any>(
         );
 
         const result = hasRetryOptions
-          ? await enhancedUpdateMany<T>(this.entity, this.kv, updates, options, modelName)
-          : await batchUpdate<T>(this.entity, this.kv, updates, options, modelName);
+          ? await enhancedUpdateMany<T>(
+            this.entity,
+            this.kv,
+            updates,
+            options,
+            modelName,
+          )
+          : await batchUpdate<T>(
+            this.entity,
+            this.kv,
+            updates,
+            options,
+            modelName,
+          );
 
         // Convert updated items to model instances
         const convertedResult: BatchUpdateResult<DynamicModel & T> = {
@@ -995,8 +1019,20 @@ export function createModelClass<T = any>(
         );
 
         const result = hasRetryOptions
-          ? await enhancedDeleteMany<T>(this.entity, this.kv, keys, options, modelName)
-          : await batchDelete<T>(this.entity, this.kv, keys, options, modelName);
+          ? await enhancedDeleteMany<T>(
+            this.entity,
+            this.kv,
+            keys,
+            options,
+            modelName,
+          )
+          : await batchDelete<T>(
+            this.entity,
+            this.kv,
+            keys,
+            options,
+            modelName,
+          );
 
         // Convert deleted items to model instances (if returned)
         const convertedResult: BatchDeleteResult<DynamicModel & T> = {
@@ -1277,12 +1313,16 @@ export function createModelClass<T = any>(
         }
 
         // Find the existing document first to ensure it exists
-        const existing = typeof id === 'string' 
+        const existing = typeof id === "string"
           ? await this.findById(id)
           : await this.findUnique(id);
-          
+
         if (!existing) {
-          throw new KVMNotFoundError(modelName, id as string | Record<string, any>, "id");
+          throw new KVMNotFoundError(
+            modelName,
+            id as string | Record<string, any>,
+            "id",
+          );
         }
 
         // Update using the core update function
@@ -1340,7 +1380,8 @@ export function createModelClass<T = any>(
         let existing: (DynamicModel & T) | null = null;
 
         // If findCriteria has the primary key field, use findById for efficiency
-        const primaryKeyField = this.entity.primaryKey.find(pk => pk.key)?.key;
+        const primaryKeyField = this.entity.primaryKey.find((pk) => pk.key)
+          ?.key;
         if (primaryKeyField && findCriteria[primaryKeyField]) {
           existing = await this.findById(findCriteria[primaryKeyField]);
         } else {
@@ -1349,20 +1390,20 @@ export function createModelClass<T = any>(
           if (criteriaKeys.length === 1) {
             const [fieldName] = criteriaKeys;
             const fieldValue = findCriteria[fieldName];
-            
+
             // Check if this field has a secondary index
             const hasIndex = this.entity.secondaryIndexes?.some(
-              idx => idx.key.some(keyPart => keyPart.key === fieldName)
+              (idx) => idx.key.some((keyPart) => keyPart.key === fieldName),
             );
-            
+
             if (hasIndex) {
               existing = await this.findUnique(fieldValue, fieldName);
             } else {
               // Fall back to scanning all records - this is inefficient for large datasets
               // In a real implementation, you might want to limit this or require indexes
               const results = await this.findMany({ limit: 1000 });
-              existing = results.find(doc => {
-                return Object.entries(findCriteria).every(([key, value]) => 
+              existing = results.find((doc) => {
+                return Object.entries(findCriteria).every(([key, value]) =>
                   (doc as any)[key] === value
                 );
               }) || null;
@@ -1370,8 +1411,8 @@ export function createModelClass<T = any>(
           } else {
             // Multiple criteria - scan and filter
             const results = await this.findMany({ limit: 1000 });
-            existing = results.find(doc => {
-              return Object.entries(findCriteria).every(([key, value]) => 
+            existing = results.find((doc) => {
+              return Object.entries(findCriteria).every(([key, value]) =>
                 (doc as any)[key] === value
               );
             }) || null;
@@ -1503,7 +1544,12 @@ export function createModelClass<T = any>(
         };
 
         // Execute post-upsertMany hooks
-        await this.hooks.executePostHooks("upsertMany", context, batchResult, results[0] || null);
+        await this.hooks.executePostHooks(
+          "upsertMany",
+          context,
+          batchResult,
+          results[0] || null,
+        );
 
         return batchResult;
       } catch (error) {
@@ -1790,7 +1836,9 @@ export function createModelClass<T = any>(
      */
     static async paginate(
       options?: import("./list-operations.ts").PaginationOptions,
-    ): Promise<import("./model-types.ts").ModelPaginatedResult<DynamicModel & T>> {
+    ): Promise<
+      import("./model-types.ts").ModelPaginatedResult<DynamicModel & T>
+    > {
       const { paginate } = await import("./list-operations.ts");
       const result = await paginate<T>(this.entity, this.kv, options);
 

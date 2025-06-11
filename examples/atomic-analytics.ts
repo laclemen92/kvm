@@ -1,13 +1,13 @@
 /**
  * Example: Building Analytics Tracking using KVM's Core Atomic Utilities
- * 
+ *
  * This example shows how to implement real-time analytics with features like:
  * - Page view tracking
  * - User activity metrics
  * - Daily/hourly statistics
  * - Custom event tracking
  * - Funnel analysis
- * 
+ *
  * This is built using KVM's core AtomicCounter and time-based keys.
  */
 
@@ -24,7 +24,10 @@ export class AtomicAnalytics {
   /**
    * Track a single metric increment
    */
-  async trackMetric(metric: string, amount: number | bigint = 1): Promise<AtomicTransactionResult> {
+  async trackMetric(
+    metric: string,
+    amount: number | bigint = 1,
+  ): Promise<AtomicTransactionResult> {
     const counter = this.getMetricCounter(metric);
     return await counter.increment(amount);
   }
@@ -32,15 +35,17 @@ export class AtomicAnalytics {
   /**
    * Track multiple metrics atomically
    */
-  async trackMetrics(metrics: Record<string, number | bigint>): Promise<AtomicTransactionResult> {
+  async trackMetrics(
+    metrics: Record<string, number | bigint>,
+  ): Promise<AtomicTransactionResult> {
     const builder = AtomicUtils.builder(this.kv);
-    
+
     for (const [metric, amount] of Object.entries(metrics)) {
       const key = this.getMetricKey(metric);
       const value = typeof amount === "number" ? BigInt(amount) : amount;
       builder.sum(key, value);
     }
-    
+
     return await builder.commit();
   }
 
@@ -56,13 +61,13 @@ export class AtomicAnalytics {
    * Track page views with automatic daily/hourly breakdown
    */
   async trackPageView(
-    page: string, 
-    userId?: string, 
-    timestamp: Date = new Date()
+    page: string,
+    userId?: string,
+    timestamp: Date = new Date(),
   ): Promise<AtomicTransactionResult> {
-    const dateStr = timestamp.toISOString().split('T')[0]; // YYYY-MM-DD
+    const dateStr = timestamp.toISOString().split("T")[0]; // YYYY-MM-DD
     const hourStr = timestamp.toISOString().substring(0, 13); // YYYY-MM-DDTHH
-    
+
     const metrics: Record<string, number> = {
       [`pages.${page}.total`]: 1,
       [`pages.${page}.daily.${dateStr}`]: 1,
@@ -84,12 +89,12 @@ export class AtomicAnalytics {
    * Track user activity (DAU - Daily Active Users)
    */
   async trackUserActivity(
-    userId: string, 
+    userId: string,
     activity: string = "active",
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<AtomicTransactionResult> {
-    const dateStr = timestamp.toISOString().split('T')[0];
-    
+    const dateStr = timestamp.toISOString().split("T")[0];
+
     return await this.trackMetrics({
       [`users.activity.${activity}.total`]: 1,
       [`users.activity.${activity}.daily.${dateStr}`]: 1,
@@ -104,10 +109,10 @@ export class AtomicAnalytics {
   async trackEvent(
     eventName: string,
     properties?: Record<string, string | number>,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<AtomicTransactionResult> {
-    const dateStr = timestamp.toISOString().split('T')[0];
-    
+    const dateStr = timestamp.toISOString().split("T")[0];
+
     const metrics: Record<string, number> = {
       [`events.${eventName}.total`]: 1,
       [`events.${eventName}.daily.${dateStr}`]: 1,
@@ -135,10 +140,10 @@ export class AtomicAnalytics {
     funnelName: string,
     step: string,
     userId: string,
-    timestamp: Date = new Date()
+    timestamp: Date = new Date(),
   ): Promise<AtomicTransactionResult> {
-    const dateStr = timestamp.toISOString().split('T')[0];
-    
+    const dateStr = timestamp.toISOString().split("T")[0];
+
     return await this.trackMetrics({
       [`funnels.${funnelName}.${step}.total`]: 1,
       [`funnels.${funnelName}.${step}.daily.${dateStr}`]: 1,
@@ -152,19 +157,19 @@ export class AtomicAnalytics {
   async getDateRangeMetrics(
     metricPrefix: string,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<Array<{ date: string; value: bigint }>> {
     const results: Array<{ date: string; value: bigint }> = [];
-    
+
     const start = KeyUtils.dateKey(this.namespace, metricPrefix, startDate);
     const end = KeyUtils.dateKey(this.namespace, metricPrefix, endDate);
-    
+
     for await (const entry of this.kv.list<Deno.KvU64>({ start, end })) {
       const dateStr = entry.key[entry.key.length - 1] as string;
       const value = entry.value?.value ?? 0n;
       results.push({ date: dateStr, value });
     }
-    
+
     return results.sort((a, b) => a.date.localeCompare(b.date));
   }
 
@@ -173,30 +178,34 @@ export class AtomicAnalytics {
    */
   async getHourlyBreakdown(
     metric: string,
-    date: Date
+    date: Date,
   ): Promise<Array<{ hour: number; value: bigint }>> {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = date.toISOString().split("T")[0];
     const results: Array<{ hour: number; value: bigint }> = [];
-    
+
     for (let hour = 0; hour < 24; hour++) {
-      const hourStr = `${dateStr}T${hour.toString().padStart(2, '0')}`;
+      const hourStr = `${dateStr}T${hour.toString().padStart(2, "0")}`;
       const counter = this.getMetricCounter(`${metric}.hourly.${hourStr}`);
       const value = await counter.get();
       results.push({ hour, value });
     }
-    
+
     return results;
   }
 
   /**
    * Get top pages by views
    */
-  async getTopPages(limit = 10): Promise<Array<{ page: string; views: bigint }>> {
+  async getTopPages(
+    limit = 10,
+  ): Promise<Array<{ page: string; views: bigint }>> {
     const pages: Array<{ page: string; views: bigint }> = [];
-    
-    for await (const entry of this.kv.list<Deno.KvU64>({ 
-      prefix: [this.namespace, "pages"] 
-    })) {
+
+    for await (
+      const entry of this.kv.list<Deno.KvU64>({
+        prefix: [this.namespace, "pages"],
+      })
+    ) {
       const key = entry.key;
       if (key[key.length - 1] === "total") {
         const page = key[key.length - 2] as string;
@@ -204,7 +213,7 @@ export class AtomicAnalytics {
         pages.push({ page, views });
       }
     }
-    
+
     return pages
       .sort((a, b) => Number(b.views - a.views))
       .slice(0, limit);
@@ -216,11 +225,15 @@ export class AtomicAnalytics {
   async getFunnelConversionRate(
     funnelName: string,
     fromStep: string,
-    toStep: string
+    toStep: string,
   ): Promise<number> {
-    const fromCount = await this.getMetric(`funnels.${funnelName}.${fromStep}.total`);
-    const toCount = await this.getMetric(`funnels.${funnelName}.${toStep}.total`);
-    
+    const fromCount = await this.getMetric(
+      `funnels.${funnelName}.${fromStep}.total`,
+    );
+    const toCount = await this.getMetric(
+      `funnels.${funnelName}.${toStep}.total`,
+    );
+
     if (fromCount === 0n) return 0;
     return Number(toCount) / Number(fromCount);
   }
@@ -241,7 +254,7 @@ export class AtomicAnalytics {
   }
 
   private getMetricKey(metric: string): Deno.KvKey {
-    return [this.namespace, ...metric.split('.')];
+    return [this.namespace, ...metric.split(".")];
   }
 }
 
@@ -263,7 +276,7 @@ if (import.meta.main) {
   await analytics.trackEvent("purchase", {
     product: "laptop",
     amount: 999,
-    category: "electronics"
+    category: "electronics",
   });
 
   // Track funnel steps
@@ -272,16 +285,29 @@ if (import.meta.main) {
   await analytics.trackFunnelStep("checkout", "complete", "user123");
 
   // Get metrics
-  console.log("Total page views:", await analytics.getMetric("page_views.total"));
-  console.log("Total purchases:", await analytics.getMetric("events.purchase.total"));
-  
+  console.log(
+    "Total page views:",
+    await analytics.getMetric("page_views.total"),
+  );
+  console.log(
+    "Total purchases:",
+    await analytics.getMetric("events.purchase.total"),
+  );
+
   // Get top pages
   const topPages = await analytics.getTopPages();
   console.log("Top pages:", topPages);
 
   // Get funnel conversion rate
-  const conversionRate = await analytics.getFunnelConversionRate("checkout", "cart", "complete");
-  console.log("Checkout conversion rate:", (conversionRate * 100).toFixed(2) + "%");
+  const conversionRate = await analytics.getFunnelConversionRate(
+    "checkout",
+    "cart",
+    "complete",
+  );
+  console.log(
+    "Checkout conversion rate:",
+    (conversionRate * 100).toFixed(2) + "%",
+  );
 
   kv.close();
 }

@@ -75,7 +75,10 @@ export interface MigrationOptions {
   /**
    * Function called after each migration is executed
    */
-  onAfterMigration?: (migration: Migration, result: MigrationExecutionResult) => void | Promise<void>;
+  onAfterMigration?: (
+    migration: Migration,
+    result: MigrationExecutionResult,
+  ) => void | Promise<void>;
 }
 
 /**
@@ -230,7 +233,11 @@ export interface MigrationUtils {
   /**
    * Add a new field to all records of an entity
    */
-  addField(entityName: string, fieldName: string, defaultValue: any): Promise<void>;
+  addField(
+    entityName: string,
+    fieldName: string,
+    defaultValue: any,
+  ): Promise<void>;
 
   /**
    * Remove a field from all records of an entity
@@ -240,7 +247,11 @@ export interface MigrationUtils {
   /**
    * Rename a field in all records of an entity
    */
-  renameField(entityName: string, oldName: string, newName: string): Promise<void>;
+  renameField(
+    entityName: string,
+    oldName: string,
+    newName: string,
+  ): Promise<void>;
 
   /**
    * Transform a field value in all records of an entity
@@ -281,7 +292,9 @@ export interface MigrationUtils {
    */
   batchProcess(
     entityName: string,
-    processor: (records: Array<{ key: Deno.KvKey; value: any }>) => Promise<void>,
+    processor: (
+      records: Array<{ key: Deno.KvKey; value: any }>,
+    ) => Promise<void>,
     batchSize?: number,
   ): Promise<void>;
 

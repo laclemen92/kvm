@@ -8,8 +8,8 @@ import type {
 } from "./types.ts";
 import {
   buildPrimaryKey,
-  isDenoKvKeyPart,
   isDenoKvKey,
+  isDenoKvKeyPart,
   isStringKeyedValueObject,
 } from "./utils.ts";
 
@@ -252,16 +252,16 @@ async function _eagerLoadRelation<T>(
 
   // Get the foreign key value(s) from the record
   let foreignKeyValues: any[];
-  
+
   // For MANY_TO_MANY, we need the primary key value
   if (relation.type === RelationType.MANY_TO_MANY) {
-    const primaryKeyField = entity.primaryKey[0]?.key || 'id';
+    const primaryKeyField = entity.primaryKey[0]?.key || "id";
     foreignKeyValues = [value.id || value[primaryKeyField]];
   } else {
     foreignKeyValues = relation.fields.map((field: string) => value[field])
       .filter(Boolean);
   }
-  
+
   if (foreignKeyValues.length === 0) {
     return;
   }

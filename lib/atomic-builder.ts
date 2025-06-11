@@ -453,15 +453,19 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     // Execute with timeout
     const commitPromise = atomic.commit();
     let timeoutId: number | undefined;
-    
+
     let result: Deno.KvCommitResult | Deno.KvCommitError;
     if (options.timeout) {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error(`Atomic transaction timed out after ${options.timeout}ms`));
+          reject(
+            new Error(
+              `Atomic transaction timed out after ${options.timeout}ms`,
+            ),
+          );
         }, options.timeout);
       });
-      
+
       try {
         result = await Promise.race([commitPromise, timeoutPromise]);
       } finally {

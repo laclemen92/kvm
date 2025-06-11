@@ -1,4 +1,4 @@
-import { assertEquals, assertExists, assert } from "jsr:@std/assert";
+import { assert, assertEquals, assertExists } from "jsr:@std/assert";
 import { z } from "zod";
 import { FluentKVM } from "./fluent-model.ts";
 
@@ -137,7 +137,10 @@ Deno.test("Fluent Model - Secondary indexes", async () => {
   });
 
   // Test finding by secondary index (email)
-  const foundByEmail = await User.findUnique("john@example.com", "users_by_email");
+  const foundByEmail = await User.findUnique(
+    "john@example.com",
+    "users_by_email",
+  );
   assertExists(foundByEmail);
   assertEquals(foundByEmail.id, "user1");
 
@@ -171,7 +174,7 @@ Deno.test("Fluent Model - ULID generation", async () => {
 
   // ULIDs should be sortable by time
   // Add small delay to ensure different timestamp
-  await new Promise(resolve => setTimeout(resolve, 2));
+  await new Promise((resolve) => setTimeout(resolve, 2));
   const doc2 = await Document.create({
     title: "Second Document",
   });

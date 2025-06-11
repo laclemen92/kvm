@@ -45,7 +45,7 @@ const testMigrations: Migration[] = [
 
 Deno.test("Migration System - Basic Setup", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Check initial migration status
     const status = await kvm.getMigrationStatus([]); // Pass empty array to avoid file system
@@ -53,7 +53,7 @@ Deno.test("Migration System - Basic Setup", async () => {
     assertEquals(status.isUpToDate, true);
     assertEquals(status.appliedMigrations.length, 0);
     assertEquals(status.pendingMigrations.length, 0);
-    
+
     // Validate integrity
     const integrity = await kvm.validateMigrationIntegrity();
     assertEquals(integrity.isValid, true);
@@ -65,7 +65,7 @@ Deno.test("Migration System - Basic Setup", async () => {
 
 Deno.test("Migration System - Load Migrations from Array", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     const migrations = await kvm.loadMigrations(testMigrations);
     assertEquals(migrations.length, 3);
@@ -79,26 +79,26 @@ Deno.test("Migration System - Load Migrations from Array", async () => {
 
 Deno.test("Migration System - Invalid Migration Validation", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Test duplicate versions
     const duplicateMigrations: Migration[] = [
       { ...testMigrations[0] },
       { ...testMigrations[0] }, // Duplicate version 1
     ];
-    
+
     await assertRejects(
       async () => await kvm.loadMigrations(duplicateMigrations),
       MigrationError,
       "Duplicate migration version: 1",
     );
-    
+
     // Test gap in sequence
     const gappedMigrations: Migration[] = [
       testMigrations[0], // version 1
       testMigrations[2], // version 3 (missing version 2)
     ];
-    
+
     await assertRejects(
       async () => await kvm.loadMigrations(gappedMigrations),
       MigrationError,
@@ -111,7 +111,7 @@ Deno.test("Migration System - Invalid Migration Validation", async () => {
 
 Deno.test("Migration System - Run Migrations Up", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Create test data
     const userSchema = z.object({
@@ -127,8 +127,18 @@ Deno.test("Migration System - Run Migrations Up", async () => {
     });
 
     // Create some test users
-    await User.create({ id: "user1", name: "John", email: "john@example.com", age: 25 });
-    await User.create({ id: "user2", name: "Jane", email: "jane@example.com", age: 30 });
+    await User.create({
+      id: "user1",
+      name: "John",
+      email: "john@example.com",
+      age: 25,
+    });
+    await User.create({
+      id: "user2",
+      name: "Jane",
+      email: "jane@example.com",
+      age: 30,
+    });
 
     // Run migrations programmatically
     const result = await kvm.migrate({
@@ -152,9 +162,15 @@ Deno.test("Migration System - Run Migrations Up", async () => {
     const users = await User.findMany();
     for (const user of users) {
       assert((user as any).status === "active", "Status field should be added");
-      assert((user as any).emailAddress, "Email should be renamed to emailAddress");
+      assert(
+        (user as any).emailAddress,
+        "Email should be renamed to emailAddress",
+      );
       assert(!(user as any).email, "Old email field should not exist");
-      assert(typeof (user as any).age === "string", "Age should be transformed to string");
+      assert(
+        typeof (user as any).age === "string",
+        "Age should be transformed to string",
+      );
     }
   } finally {
     await kvm.close();
@@ -163,7 +179,7 @@ Deno.test("Migration System - Run Migrations Up", async () => {
 
 Deno.test("Migration System - Rollback Migrations", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Create test data and run migrations
     const userSchema = z.object({
@@ -178,7 +194,12 @@ Deno.test("Migration System - Rollback Migrations", async () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "John", email: "john@example.com", age: 25 });
+    await User.create({
+      id: "user1",
+      name: "John",
+      email: "john@example.com",
+      age: 25,
+    });
 
     // Run migrations first
     await kvm.migrate({
@@ -205,10 +226,19 @@ Deno.test("Migration System - Rollback Migrations", async () => {
     // Verify data state after rollback
     const users = await User.findMany();
     for (const user of users) {
-      assert((user as any).status === "active", "Status field should still exist");
+      assert(
+        (user as any).status === "active",
+        "Status field should still exist",
+      );
       assert((user as any).email, "Email field should be restored");
-      assert(!(user as any).emailAddress, "EmailAddress field should be removed");
-      assert(typeof (user as any).age === "number", "Age should be back to number");
+      assert(
+        !(user as any).emailAddress,
+        "EmailAddress field should be removed",
+      );
+      assert(
+        typeof (user as any).age === "number",
+        "Age should be back to number",
+      );
     }
   } finally {
     await kvm.close();
@@ -217,7 +247,7 @@ Deno.test("Migration System - Rollback Migrations", async () => {
 
 Deno.test("Migration System - Partial Migration Run", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Run only first two migrations
     const result = await kvm.migrate({
@@ -241,7 +271,7 @@ Deno.test("Migration System - Partial Migration Run", async () => {
 
 Deno.test("Migration System - Dry Run", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Create test data
     const userSchema = z.object({
@@ -256,7 +286,12 @@ Deno.test("Migration System - Dry Run", async () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "John", email: "john@example.com", age: 25 });
+    await User.create({
+      id: "user1",
+      name: "John",
+      email: "john@example.com",
+      age: 25,
+    });
 
     // Run dry run
     const result = await kvm.migrate({
@@ -266,7 +301,7 @@ Deno.test("Migration System - Dry Run", async () => {
 
     assertEquals(result.success, true);
     assertEquals(result.executedMigrations.length, 3);
-    
+
     // Verify no actual changes were made
     const status = await kvm.getMigrationStatus(testMigrations);
     assertEquals(status.currentVersion, 0); // Should still be 0
@@ -275,9 +310,15 @@ Deno.test("Migration System - Dry Run", async () => {
     // Verify data is unchanged
     const users = await User.findMany();
     for (const user of users) {
-      assert(!(user as any).status, "Status field should not be added in dry run");
+      assert(
+        !(user as any).status,
+        "Status field should not be added in dry run",
+      );
       assert((user as any).email, "Email field should still exist");
-      assert(typeof (user as any).age === "number", "Age should still be number");
+      assert(
+        typeof (user as any).age === "number",
+        "Age should still be number",
+      );
     }
   } finally {
     await kvm.close();
@@ -286,7 +327,7 @@ Deno.test("Migration System - Dry Run", async () => {
 
 Deno.test("Migration System - Migration Utils", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Create test data
     const userSchema = z.object({
@@ -301,8 +342,18 @@ Deno.test("Migration System - Migration Utils", async () => {
       primaryKey: [{ name: "users", key: "id" }],
     });
 
-    await User.create({ id: "user1", name: "John", email: "john@example.com", age: 25 });
-    await User.create({ id: "user2", name: "Jane", email: "jane@example.com", age: 30 });
+    await User.create({
+      id: "user1",
+      name: "John",
+      email: "john@example.com",
+      age: 25,
+    });
+    await User.create({
+      id: "user2",
+      name: "Jane",
+      email: "jane@example.com",
+      age: 30,
+    });
 
     // Test various utility functions through migrations
     const utilMigrations: Migration[] = [
@@ -312,11 +363,11 @@ Deno.test("Migration System - Migration Utils", async () => {
         up: async (kv, utils) => {
           // Test addField
           await utils.addField("users", "isActive", true);
-          
+
           // Test fieldExists
           const hasIsActive = await utils.fieldExists("users", "isActive");
           assert(hasIsActive, "isActive field should exist");
-          
+
           // Test countRecords
           const count = await utils.countRecords("users");
           assertEquals(count, 2);
@@ -331,13 +382,16 @@ Deno.test("Migration System - Migration Utils", async () => {
         up: async (kv, utils) => {
           // Test backup and restore
           const backupName = await utils.backupEntity("users");
-          assert(backupName.includes("users_backup_"), "Backup name should contain timestamp");
-          
+          assert(
+            backupName.includes("users_backup_"),
+            "Backup name should contain timestamp",
+          );
+
           // Test truncate and restore
           await utils.truncateEntity("users");
           const countAfterTruncate = await utils.countRecords("users");
           assertEquals(countAfterTruncate, 0);
-          
+
           await utils.restoreEntity("users", backupName);
           const countAfterRestore = await utils.countRecords("users");
           assertEquals(countAfterRestore, 2);
@@ -361,7 +415,7 @@ Deno.test("Migration System - Migration Utils", async () => {
 
 Deno.test("Migration System - Error Handling", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Migration that will fail
     const failingMigrations: Migration[] = [
@@ -396,7 +450,7 @@ Deno.test("Migration System - Error Handling", async () => {
     assertEquals(result1.executedMigrations.length, 0);
     assertEquals(result1.failedMigrations.length, 1);
     assertEquals(result1.errors.length, 1);
-    
+
     // Reset for next test
     await kvm.resetMigrations();
 
@@ -417,7 +471,7 @@ Deno.test("Migration System - Error Handling", async () => {
 
 Deno.test("Migration System - Statistics and Monitoring", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Create test data
     const userSchema = z.object({
@@ -440,12 +494,12 @@ Deno.test("Migration System - Statistics and Monitoring", async () => {
 
     // Get statistics
     const stats = await kvm.getMigrationStats();
-    
+
     assert(stats.storage.currentVersion === 2);
     assert(stats.storage.totalAppliedMigrations === 2);
     assert(stats.storage.firstMigrationDate instanceof Date);
     assert(stats.storage.lastMigrationDate instanceof Date);
-    
+
     assert(stats.utils.totalRecords >= 1);
     assert(stats.utils.entityCounts.users >= 1);
   } finally {
@@ -455,7 +509,7 @@ Deno.test("Migration System - Statistics and Monitoring", async () => {
 
 Deno.test("Migration System - Integrity Validation", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Run some migrations
     await kvm.migrate({
@@ -482,7 +536,7 @@ Deno.test("Migration System - Integrity Validation", async () => {
 
 Deno.test("Migration System - Rollback Error Handling", async () => {
   const kvm = await createKVM(":memory:");
-  
+
   try {
     // Try to rollback when no migrations have been applied
     await assertRejects(

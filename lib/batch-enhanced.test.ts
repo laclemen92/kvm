@@ -1,8 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.220.0/assert/mod.ts";
 import {
   enhancedCreateMany,
-  enhancedUpdateMany,
   enhancedDeleteMany,
+  enhancedUpdateMany,
 } from "./batch-enhanced.ts";
 import type { KVMEntity } from "./types.ts";
 import { z } from "zod";

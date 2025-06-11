@@ -1,12 +1,12 @@
 /**
  * Example: Building a Leaderboard using KVM's Core Atomic Utilities
- * 
+ *
  * This example shows how to implement a gaming leaderboard with features like:
  * - Player score tracking
- * - Leaderboard rankings  
+ * - Leaderboard rankings
  * - Score updates and incrementing
  * - Top N players retrieval
- * 
+ *
  * This is built using KVM's core AtomicCounter and list operations.
  */
 
@@ -22,7 +22,10 @@ export class AtomicLeaderboard {
   /**
    * Update a player's score to a specific value
    */
-  async updateScore(playerId: string, score: number | bigint): Promise<AtomicTransactionResult> {
+  async updateScore(
+    playerId: string,
+    score: number | bigint,
+  ): Promise<AtomicTransactionResult> {
     const counter = this.getPlayerCounter(playerId);
     return await counter.set(score);
   }
@@ -30,7 +33,10 @@ export class AtomicLeaderboard {
   /**
    * Increment a player's score by an amount
    */
-  async incrementScore(playerId: string, amount: number | bigint = 1): Promise<AtomicTransactionResult> {
+  async incrementScore(
+    playerId: string,
+    amount: number | bigint = 1,
+  ): Promise<AtomicTransactionResult> {
     const counter = this.getPlayerCounter(playerId);
     return await counter.increment(amount);
   }
@@ -38,7 +44,10 @@ export class AtomicLeaderboard {
   /**
    * Decrement a player's score by an amount
    */
-  async decrementScore(playerId: string, amount: number | bigint = 1): Promise<AtomicTransactionResult> {
+  async decrementScore(
+    playerId: string,
+    amount: number | bigint = 1,
+  ): Promise<AtomicTransactionResult> {
     const counter = this.getPlayerCounter(playerId);
     return await counter.decrement(amount);
   }
@@ -64,9 +73,11 @@ export class AtomicLeaderboard {
    * Note: This is a simplified implementation. For large leaderboards,
    * you'd want to implement proper indexing by score ranges.
    */
-  async getTopPlayers(limit = 10): Promise<Array<{ playerId: string; score: bigint }>> {
+  async getTopPlayers(
+    limit = 10,
+  ): Promise<Array<{ playerId: string; score: bigint }>> {
     const players: Array<{ playerId: string; score: bigint }> = [];
-    
+
     // List all player scores
     const prefix = this.getScoreKeyPrefix();
     for await (const entry of this.kv.list<Deno.KvU64>({ prefix })) {
@@ -87,8 +98,8 @@ export class AtomicLeaderboard {
   async getPlayerRank(playerId: string): Promise<number> {
     const playerScore = await this.getScore(playerId);
     const topPlayers = await this.getTopPlayers(1000); // Get more players to find rank
-    
-    const rank = topPlayers.findIndex(p => p.playerId === playerId);
+
+    const rank = topPlayers.findIndex((p) => p.playerId === playerId);
     return rank === -1 ? -1 : rank + 1; // 1-based ranking
   }
 
@@ -101,7 +112,7 @@ export class AtomicLeaderboard {
     averageScore: number;
   }> {
     const players = await this.getTopPlayers(1000); // Get all players
-    
+
     if (players.length === 0) {
       return { totalPlayers: 0, highestScore: 0n, averageScore: 0 };
     }
@@ -120,15 +131,19 @@ export class AtomicLeaderboard {
   /**
    * Batch update multiple player scores atomically
    */
-  async batchUpdateScores(updates: Array<{ playerId: string; score: number | bigint }>): Promise<AtomicTransactionResult> {
+  async batchUpdateScores(
+    updates: Array<{ playerId: string; score: number | bigint }>,
+  ): Promise<AtomicTransactionResult> {
     const builder = AtomicUtils.builder(this.kv);
-    
+
     for (const update of updates) {
       const key = this.getScoreKey(update.playerId);
-      const value = typeof update.score === "number" ? BigInt(update.score) : update.score;
+      const value = typeof update.score === "number"
+        ? BigInt(update.score)
+        : update.score;
       builder.set(key, new Deno.KvU64(value));
     }
-    
+
     return await builder.commit();
   }
 

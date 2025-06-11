@@ -8,7 +8,12 @@ import {
 import { expect } from "jsr:@std/expect";
 import type { z } from "zod";
 import { create } from "./create.ts";
-import { commentEntity, postEntity, productEntity, manyProductEntity } from "./fixtures.ts";
+import {
+  commentEntity,
+  manyProductEntity,
+  postEntity,
+  productEntity,
+} from "./fixtures.ts";
 import type { KVMEntity } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
 
