@@ -16,6 +16,8 @@ import type {
   MigrationStatus,
   MigrationStorageConfig,
 } from "./migration-types.ts";
+import { KVMQueueManager } from "./queue-manager.ts";
+import type { Queue, QueueManager } from "./queue-types.ts";
 
 /**
  * Main KVM class for managing models and database connection
@@ -23,12 +25,14 @@ import type {
 export class KVM {
   private models = new Map<string, ModelConstructor>();
   private migrationManager: MigrationManager;
+  private queueManager: KVMQueueManager;
 
   constructor(
     private kv: Deno.Kv,
     migrationConfig?: MigrationStorageConfig,
   ) {
     this.migrationManager = new MigrationManager(kv, migrationConfig);
+    this.queueManager = new KVMQueueManager(kv);
   }
 
   /**
@@ -135,14 +139,19 @@ export class KVM {
   /**
    * Rollback migrations to a specific version
    */
-  async rollback(toVersion?: number, migrations?: Migration[]): Promise<MigrationResult> {
+  async rollback(
+    toVersion?: number,
+    migrations?: Migration[],
+  ): Promise<MigrationResult> {
     return await this.migrationManager.down(toVersion, migrations);
   }
 
   /**
    * Get current migration status
    */
-  async getMigrationStatus(migrationsPath?: string | Migration[]): Promise<MigrationStatus> {
+  async getMigrationStatus(
+    migrationsPath?: string | Migration[],
+  ): Promise<MigrationStatus> {
     return await this.migrationManager.getStatus(migrationsPath);
   }
 
@@ -182,6 +191,24 @@ export class KVM {
     await this.migrationManager.reset();
   }
 
+  // ============================================================================
+  // Queue System Methods
+  // ============================================================================
+
+  /**
+   * Get or create a queue
+   */
+  queue<TData = any>(queueName: string): Queue<TData> {
+    return this.queueManager.queue<TData>(queueName);
+  }
+
+  /**
+   * Get the queue manager instance
+   */
+  get queues(): QueueManager {
+    return this.queueManager;
+  }
+
   /**
    * Close the database connection
    */
@@ -199,9 +226,9 @@ export async function createKVM(
 ): Promise<KVM> {
   const kv = await Deno.openKv(path);
   const kvmInstance = new KVM(kv, migrationConfig);
-  
+
   // Initialize migrations on first use
   await kvmInstance.initializeMigrations();
-  
+
   return kvmInstance;
 }

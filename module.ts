@@ -91,8 +91,16 @@ export { createKVM, KVM } from "./lib/kvm.ts";
 export { BaseModel } from "./lib/model.ts";
 
 // Fluent Model Definition API (Latest - Highly Recommended)
-export { FluentKVM, FluentModelBuilder, FieldBuilder } from "./lib/fluent-model.ts";
-export { SimpleFluentKVM, SimpleField, field } from "./lib/fluent-model-simple.ts";
+export {
+  FieldBuilder,
+  FluentKVM,
+  FluentModelBuilder,
+} from "./lib/fluent-model.ts";
+export {
+  field,
+  SimpleField,
+  SimpleFluentKVM,
+} from "./lib/fluent-model-simple.ts";
 export type { SimpleModelDefinition } from "./lib/fluent-model-simple.ts";
 export type {
   CreateOptions,
@@ -245,6 +253,28 @@ export {
   watchRecords,
 } from "./lib/watch.ts";
 export { WatchUtils } from "./lib/watch-utils.ts";
+
+// Export Queue System
+export type {
+  EnqueueOptions,
+  JobNotFoundError,
+  JobProcessingError,
+  JobProcessor,
+  JobStatus,
+  Queue,
+  QueueError,
+  QueueJob,
+  QueueManager,
+  QueueNotFoundError,
+  QueueOptions,
+  QueueStats,
+  QueueWorker,
+  WorkerOptions,
+} from "./lib/queue-types.ts";
+
+export { KVMQueue } from "./lib/queue.ts";
+export { KVMQueueManager } from "./lib/queue-manager.ts";
+export { QueueWorkerImpl } from "./lib/queue-worker.ts";
 
 // Re-export Zod types for convenience
 export type { ZodObject, ZodRawShape } from "zod";
