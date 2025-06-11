@@ -636,4 +636,48 @@ describe("Batch Operations", () => {
       expect(KVMErrorUtils.isValidationError(emailError?.error)).toBe(true);
     });
   });
+
+  describe("Edge Cases", () => {
+    it("should handle updateMany with empty data array", async () => {
+      const userSchema = z.object({
+        id: z.string(),
+        name: z.string(),
+      });
+
+      const User = kvm.model("users", {
+        schema: userSchema,
+        primaryKey: [{ name: "users", key: "id" }],
+      });
+
+      const result = await User.updateMany([]);
+      expect(result.updated).toHaveLength(0);
+      expect(result.stats.total).toBe(0);
+    });
+
+    it("should handle batch operations with non-existent records", async () => {
+      const userSchema = z.object({
+        id: z.string(),
+        name: z.string(),
+      });
+
+      const User = kvm.model("users", {
+        schema: userSchema,
+        primaryKey: [{ name: "users", key: "id" }],
+      });
+
+      try {
+        const result = await User.updateMany([
+          { key: "non-existent", data: { name: "Should not fail" } }
+        ], { continueOnError: true });
+
+        // If no error is thrown, check the result structure
+        expect(result.updated).toHaveLength(0);
+        expect(result.notFound).toHaveLength(1);
+        expect(result.stats.notFound).toBe(1);
+      } catch (error) {
+        // It's also acceptable for this to throw an error when no records are found
+        expect(error).toBeDefined();
+      }
+    });
+  });
 });

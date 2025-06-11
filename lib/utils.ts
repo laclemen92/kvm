@@ -19,6 +19,12 @@ export const isStringKeyedValueObject = (
     typeof value !== "string";
 };
 
+export const isDenoKvKey = (
+  value: unknown
+): value is Deno.KvKey => {
+  return Array.isArray(value) && value.every(isDenoKvKeyPart);
+};
+
 export const buildPrimaryKey = (
   primaryKeyDef: Key,
   value: unknown | Deno.KvKeyPart | StringKeyedValueObject,

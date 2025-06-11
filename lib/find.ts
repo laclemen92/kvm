@@ -9,6 +9,7 @@ import type {
 import {
   buildPrimaryKey,
   isDenoKvKeyPart,
+  isDenoKvKey,
   isStringKeyedValueObject,
 } from "./utils.ts";
 
@@ -68,6 +69,8 @@ export const findUnique = async <T = unknown>(
     }
 
     return null;
+  } else if (isDenoKvKey(key)) {
+    return await kv.get(key);
   } else if (isDenoKvKeyPart(key) || isStringKeyedValueObject(key)) {
     const pk = buildPrimaryKey(
       entity.primaryKey,
@@ -225,8 +228,8 @@ export const eagerLoadRelations = async <T = unknown>(
       try {
         await _eagerLoadRelation(entity, kv, record, relation, includePath);
       } catch (error) {
-        // Ignore errors for individual relation loading
-        console.warn(`Failed to load relation ${path}:`, error);
+        // Log but continue processing
+        console.error(`Failed to load relation ${path}:`, error);
       }
     }
   }
@@ -248,8 +251,17 @@ async function _eagerLoadRelation<T>(
   if (!value) return;
 
   // Get the foreign key value(s) from the record
-  const foreignKeyValues = relation.fields.map((field: string) => value[field])
-    .filter(Boolean);
+  let foreignKeyValues: any[];
+  
+  // For MANY_TO_MANY, we need the primary key value
+  if (relation.type === RelationType.MANY_TO_MANY) {
+    const primaryKeyField = entity.primaryKey[0]?.key || 'id';
+    foreignKeyValues = [value.id || value[primaryKeyField]];
+  } else {
+    foreignKeyValues = relation.fields.map((field: string) => value[field])
+      .filter(Boolean);
+  }
+  
   if (foreignKeyValues.length === 0) {
     return;
   }
@@ -354,13 +366,10 @@ async function _eagerLoadOneToMany(
     );
 
     // Filter results that match the foreign key
-    const primaryKeyField = relation.foreignKey || "id";
-    const primaryKeyValue = value[primaryKeyField] || value.id;
+    const localKeyValue = value[relation.fields[0]] || value.id;
 
     const filteredResults = results.filter((result) => {
-      return relation.fields.some((field: string) =>
-        (result.value as any)?.[field] === primaryKeyValue
-      );
+      return (result.value as any)?.[relation.foreignKey] === localKeyValue;
     });
 
     value[relation.entityName] = filteredResults.map((r) => r.value);

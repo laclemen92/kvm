@@ -5,7 +5,7 @@ import type {
   SecondaryIndex,
   StringKeyedValueObject,
 } from "./types.ts";
-import { buildPrimaryKey } from "./utils.ts";
+import { buildPrimaryKey, isStringKeyedValueObject } from "./utils.ts";
 import { findUnique } from "./find.ts";
 import { TTL } from "./ttl-utils.ts";
 import type { TTLValue } from "./model-types.ts";
@@ -65,16 +65,26 @@ export const update = async <T = unknown>(
   if (entity.secondaryIndexes) {
     entity.secondaryIndexes.forEach((secondaryIndexDef: SecondaryIndex) => {
       if (secondaryIndexDef.valueType === ValueType.VALUE) {
-        const secondaryIndex: Deno.KvKey = buildPrimaryKey(
-          secondaryIndexDef.key,
-          transformedValueToUpdate,
-        );
+        // Check if all required fields for the secondary index exist
+        const hasAllFields = secondaryIndexDef.key.every((keyPart) => {
+          if (keyPart.key && isStringKeyedValueObject(transformedValueToUpdate)) {
+            return transformedValueToUpdate[keyPart.key] !== undefined;
+          }
+          return true;
+        });
 
-        operation.set(
-          secondaryIndex,
-          transformedValueToUpdate,
-          processedOptions as { expireIn?: number },
-        );
+        if (hasAllFields) {
+          const secondaryIndex: Deno.KvKey = buildPrimaryKey(
+            secondaryIndexDef.key,
+            transformedValueToUpdate,
+          );
+
+          operation.set(
+            secondaryIndex,
+            transformedValueToUpdate,
+            processedOptions as { expireIn?: number },
+          );
+        }
       }
     });
   }
