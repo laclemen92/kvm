@@ -4,7 +4,7 @@ import type {
   FindOptions,
   ModelConstructor,
   ModelDocument,
-  ModelStatic,
+  ModelStatic as _ModelStatic,
   UpdateOptions,
 } from "./model-types.ts";
 import type { FindManyOptions, KVMEntity, PopulateOptions } from "./types.ts";
@@ -22,7 +22,7 @@ import type {
 } from "./batch-types.ts";
 import type {
   HookContext,
-  HookManager,
+  HookManager as _HookManager,
   HookOptions,
   HookType,
   Plugin,
@@ -33,13 +33,13 @@ import { create } from "./create.ts";
 import {
   eagerLoadRelations,
   findFirst,
-  findFirstOrThrow,
+  type findFirstOrThrow as _findFirstOrThrow,
   findMany,
   findUnique,
-  findUniqueOrThrow,
+  type findUniqueOrThrow as _findUniqueOrThrow,
 } from "./find.ts";
-import { update, updateMany } from "./update.ts";
-import { deleteKey, deleteMany } from "./delete.ts";
+import { update, type updateMany as _updateMany } from "./update.ts";
+import { deleteKey, type deleteMany as _deleteMany } from "./delete.ts";
 import { KVMQueryBuilder } from "./query-builder.ts";
 import {
   createMany as batchCreate,
@@ -61,13 +61,14 @@ import {
 import type { AtomicMutationBuilder } from "./atomic-types.ts";
 import { createAtomicBuilder } from "./atomic-builder.ts";
 import { TTL } from "./ttl-utils.ts";
-import { AtomicUtils, ModelAtomicUtils } from "./atomic-utils.ts";
+import { AtomicUtils, type ModelAtomicUtils } from "./atomic-utils.ts";
 
 /**
  * Base model class that provides instance methods for documents
  */
-export class BaseModel<T = any> implements ModelDocument<T> {
-  [key: string]: any;
+export class BaseModel<T = Record<string, unknown>>
+  implements ModelDocument<T> {
+  [key: string]: unknown;
 
   constructor(data: T) {
     Object.assign(this, data);
@@ -83,20 +84,24 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "save",
-      document: this as any,
-      input: this as any,
+      document: this as ModelDocument<T>,
+      input: this as T,
       options,
     };
 
     try {
       // Execute pre-save hooks
-      await ModelClass.hooks.executePreHooks("save", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "save",
+        context,
+        this as ModelDocument<T>,
+      );
 
       const result = await update<T>(
         ModelClass.entity,
         ModelClass.kv,
         primaryKeyValue,
-        this as any,
+        this as T,
         options,
       );
 
@@ -109,13 +114,13 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "save",
         context,
         result,
-        this as any,
+        this as ModelDocument<T>,
       );
 
       return this;
     } catch (error) {
       if ((error as Error).name === "ZodError") {
-        throw KVMErrorUtils.fromZodError(error as any, ModelClass.modelName);
+        throw KVMErrorUtils.fromZodError(error as Error, ModelClass.modelName);
       }
       throw KVMErrorUtils.wrap(error as Error, "update", ModelClass.modelName);
     }
@@ -131,13 +136,17 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "delete",
-      document: this as any,
+      document: this as ModelDocument<T>,
       options,
     };
 
     try {
       // Execute pre-delete hooks
-      await ModelClass.hooks.executePreHooks("delete", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "delete",
+        context,
+        this as ModelDocument<T>,
+      );
 
       await deleteKey<T>(
         ModelClass.entity,
@@ -151,7 +160,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "delete",
         context,
         true,
-        this as any,
+        this as ModelDocument<T>,
       );
     } catch (error) {
       throw KVMErrorUtils.wrap(error as Error, "delete", ModelClass.modelName);
@@ -167,14 +176,18 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "update",
-      document: this as any,
+      document: this as ModelDocument<T>,
       input: data,
       options,
     };
 
     try {
       // Execute pre-update hooks
-      await ModelClass.hooks.executePreHooks("update", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "update",
+        context,
+        this as ModelDocument<T>,
+      );
 
       Object.assign(this, data);
 
@@ -185,7 +198,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "update",
         context,
         result,
-        this as any,
+        this as ModelDocument<T>,
       );
 
       return result;
@@ -284,7 +297,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
 
     // Get the foreign key value(s) from this document
     const foreignKeyValues = relation.fields.map((field) =>
-      (this as any)[field]
+      (this as Record<string, unknown>)[field]
     ).filter(Boolean);
     if (foreignKeyValues.length === 0) {
       return; // No foreign key values to populate
@@ -329,9 +342,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a belongsTo relation (single record)
    */
   private async _populateBelongsTo(
-    relation: any,
-    foreignKeyValue: any,
-    options: Partial<PopulateOptions>,
+    relation: Relation,
+    foreignKeyValue: unknown,
+    _options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {
     try {
@@ -346,9 +359,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       );
 
       if (result?.value) {
-        (this as any)[relation.entityName] = result.value;
+        (this as Record<string, unknown>)[relation.entityName] = result.value;
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore not found errors for optional relations
     }
   }
@@ -357,9 +370,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a hasMany/one-to-many relation (array of records)
    */
   private async _populateOneToMany(
-    relation: any,
-    foreignKeyValues: any[],
-    options: Partial<PopulateOptions>,
+    relation: Relation,
+    _foreignKeyValues: unknown[],
+    _options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {
     try {
@@ -380,13 +393,14 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       const primaryKeyValue = this._getPrimaryKeyValue();
       const filteredResults = results.filter((result) => {
         return relation.fields.some((field: string) =>
-          (result.value as any)?.[field] === primaryKeyValue
+          (result.value as Record<string, unknown>)?.[field] === primaryKeyValue
         );
       });
 
-      (this as any)[relation.entityName] = filteredResults.map((r) => r.value);
-    } catch (error) {
-      (this as any)[relation.entityName] = [];
+      (this as Record<string, unknown>)[relation.entityName] = filteredResults
+        .map((r) => r.value);
+    } catch (_error) {
+      (this as Record<string, unknown>)[relation.entityName] = [];
     }
   }
 
@@ -394,9 +408,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a many-to-many relation (array of records through join table)
    */
   private async _populateManyToMany(
-    relation: any,
-    foreignKeyValues: any[],
-    options: Partial<PopulateOptions>,
+    relation: Relation,
+    _foreignKeyValues: unknown[],
+    _options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {
     if (!relation.through) {
@@ -424,9 +438,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       const primaryKeyValue = this._getPrimaryKeyValue();
 
       // Find related IDs through the join table
-      const relatedIds: any[] = [];
+      const relatedIds: unknown[] = [];
       for (const joinRecord of joinResults) {
-        const joinValue = joinRecord.value as any;
+        const joinValue = joinRecord.value as Record<string, unknown>;
         if (
           joinValue &&
           relation.fields.some((field: string) =>
@@ -458,30 +472,30 @@ export class BaseModel<T = any> implements ModelDocument<T> {
           if (result?.value) {
             relatedRecords.push(result.value);
           }
-        } catch (error) {
+        } catch (_error) {
           // Ignore individual lookup failures
         }
       }
 
-      (this as any)[relation.entityName] = relatedRecords;
-    } catch (error) {
-      (this as any)[relation.entityName] = [];
+      (this as Record<string, unknown>)[relation.entityName] = relatedRecords;
+    } catch (_error) {
+      (this as Record<string, unknown>)[relation.entityName] = [];
     }
   }
 
   /**
    * Get the primary key value for this document
    */
-  public _getPrimaryKeyValue(): string | Record<string, any> {
+  public _getPrimaryKeyValue(): string | Record<string, unknown> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyDef = ModelClass.entity.primaryKey[0];
 
     if (primaryKeyDef.key) {
-      return (this as any)[primaryKeyDef.key];
+      return (this as Record<string, unknown>)[primaryKeyDef.key];
     }
 
     // For composite keys or complex scenarios
-    return this as any;
+    return this as unknown as Record<string, unknown>;
   }
 
   /**
@@ -489,7 +503,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    */
   async watch(
     options?: import("./watch-types.ts").WatchOptions,
-  ): Promise<import("./watch-types.ts").WatchResult<any>> {
+  ): Promise<import("./watch-types.ts").WatchResult<T>> {
     const ModelClass = this.constructor as ModelConstructor<T>;
     const primaryKeyValue = this._getPrimaryKeyValue();
 
@@ -504,7 +518,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     // Transform the stream to return model instances
     const originalStream = result.stream;
     const modelStream = new ReadableStream<
-      import("./watch-types.ts").WatchEvent<any>
+      import("./watch-types.ts").WatchEvent<T>
     >({
       start(controller) {
         const reader = originalStream.getReader();
@@ -521,12 +535,12 @@ export class BaseModel<T = any> implements ModelDocument<T> {
 
               // Transform the event to include model instance
               const transformedEvent: import("./watch-types.ts").WatchEvent<
-                any
+                T
               > = {
                 ...value,
-                value: value.value ? new ModelClass(value.value as any) : null,
+                value: value.value ? new ModelClass(value.value as T) : null,
                 previousValue: value.previousValue
-                  ? new ModelClass(value.previousValue as any)
+                  ? new ModelClass(value.previousValue as T)
                   : null,
               };
 
@@ -546,8 +560,10 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     return {
       stream: modelStream,
       stop: result.stop,
-      on: (callback: import("./watch-types.ts").WatchCallback<any>) =>
-        result.on(callback as any),
+      on: (callback: import("./watch-types.ts").WatchCallback<T>) =>
+        result.on(
+          callback as import("./watch-types.ts").WatchCallback<unknown>,
+        ),
       toSSE: result.toSSE,
       toWebSocket: result.toWebSocket,
     };
@@ -598,7 +614,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
 /**
  * Creates a model class with static methods
  */
-export function createModelClass<T = any>(
+export function createModelClass<T = Record<string, unknown>>(
   modelName: string,
   entity: KVMEntity,
   kv: Deno.Kv,
@@ -672,7 +688,7 @@ export function createModelClass<T = any>(
           throw error;
         }
         if ((error as Error).name === "ZodError") {
-          throw KVMErrorUtils.fromZodError(error as any, modelName);
+          throw KVMErrorUtils.fromZodError(error as Error, modelName);
         }
         throw KVMErrorUtils.wrap(error as Error, "create", modelName);
       }
@@ -746,7 +762,7 @@ export function createModelClass<T = any>(
      * Find unique document by key or secondary index
      */
     static async findUnique(
-      key: string | Deno.KvKeyPart | Record<string, any>,
+      key: string | Deno.KvKeyPart | Record<string, unknown>,
       secondaryIndexName?: string,
       includeValue: boolean = true,
     ): Promise<(DynamicModel & T) | null> {
@@ -754,7 +770,7 @@ export function createModelClass<T = any>(
         const result = await findUnique<T>(
           this.entity,
           this.kv,
-          key as any,
+          key as string | Deno.KvKeyPart | Record<string, unknown>,
           secondaryIndexName,
           includeValue,
         );
@@ -776,7 +792,7 @@ export function createModelClass<T = any>(
      * Find unique document or throw error
      */
     static async findUniqueOrThrow(
-      key: string | Deno.KvKeyPart | Record<string, any>,
+      key: string | Deno.KvKeyPart | Record<string, unknown>,
       secondaryIndexName?: string,
       includeValue?: boolean,
     ): Promise<DynamicModel & T> {
@@ -789,7 +805,7 @@ export function createModelClass<T = any>(
       if (!result) {
         throw new KVMNotFoundError(
           modelName,
-          key as string | Record<string, any>,
+          key as string | Record<string, unknown>,
           secondaryIndexName ? "unique" : "id",
         );
       }
@@ -886,16 +902,22 @@ export function createModelClass<T = any>(
       const queryBuilder = new KVMQueryBuilder<T>(
         this.entity,
         this.kv,
-        this as any,
+        this as unknown as ModelConstructor<T>,
       );
-      return queryBuilder.where(fieldOrConditions as any);
+      return queryBuilder.where(
+        fieldOrConditions as keyof T | string | Partial<T>,
+      );
     }
 
     /**
      * Create a query builder for this model
      */
     static query(): QueryBuilder<T> {
-      return new KVMQueryBuilder<T>(this.entity, this.kv, this as any);
+      return new KVMQueryBuilder<T>(
+        this.entity,
+        this.kv,
+        this as unknown as ModelConstructor<T>,
+      );
     }
 
     /**
@@ -1057,7 +1079,7 @@ export function createModelClass<T = any>(
     /**
      * Atomic bulk update with rollback support
      */
-    static async atomicBulkUpdate(
+    static atomicBulkUpdate(
       updates: Array<{
         id: string | Deno.KvKeyPart;
         data: Partial<T>;
@@ -1320,7 +1342,7 @@ export function createModelClass<T = any>(
         if (!existing) {
           throw new KVMNotFoundError(
             modelName,
-            id as string | Record<string, any>,
+            id as string | Record<string, unknown>,
             "id",
           );
         }
@@ -1354,7 +1376,7 @@ export function createModelClass<T = any>(
      * Upsert operation: find by criteria, update if found, create if not found
      */
     static async upsert(
-      findCriteria: Record<string, any>,
+      findCriteria: Record<string, unknown>,
       updateData: Partial<T>,
       createData: T,
       options?: CreateOptions | UpdateOptions,
@@ -1404,7 +1426,7 @@ export function createModelClass<T = any>(
               const results = await this.findMany({ limit: 1000 });
               existing = results.find((doc) => {
                 return Object.entries(findCriteria).every(([key, value]) =>
-                  (doc as any)[key] === value
+                  (doc as Record<string, unknown>)[key] === value
                 );
               }) || null;
             }
@@ -1413,7 +1435,7 @@ export function createModelClass<T = any>(
             const results = await this.findMany({ limit: 1000 });
             existing = results.find((doc) => {
               return Object.entries(findCriteria).every(([key, value]) =>
-                (doc as any)[key] === value
+                (doc as Record<string, unknown>)[key] === value
               );
             }) || null;
           }
@@ -1451,7 +1473,7 @@ export function createModelClass<T = any>(
      */
     static async upsertMany(
       operations: Array<{
-        findCriteria: Record<string, any>;
+        findCriteria: Record<string, unknown>;
         updateData: Partial<T>;
         createData: T;
         options?: CreateOptions | UpdateOptions;
@@ -1479,7 +1501,8 @@ export function createModelClass<T = any>(
         }
 
         const results: (DynamicModel & T)[] = [];
-        const errors: Array<{ index: number; error: Error; data: any }> = [];
+        const errors: Array<{ index: number; error: Error; data: unknown }> =
+          [];
 
         if (batchOptions?.atomic) {
           // For atomic operations, we need to handle this differently
@@ -1563,7 +1586,7 @@ export function createModelClass<T = any>(
     /**
      * Helper method to build primary key from data
      */
-    private static _buildPrimaryKey(data: any): Deno.KvKey {
+    private static _buildPrimaryKey(data: Record<string, unknown>): Deno.KvKey {
       const keyParts: Deno.KvKeyPart[] = [];
 
       for (const keyDef of this.entity.primaryKey) {
@@ -1571,7 +1594,7 @@ export function createModelClass<T = any>(
           keyParts.push(keyDef.name);
         }
         if (keyDef.key) {
-          const value = data[keyDef.key];
+          const value = (data as Record<string, unknown>)[keyDef.key];
           if (value !== undefined && value !== null) {
             keyParts.push(value);
           } else {
@@ -1595,7 +1618,7 @@ export function createModelClass<T = any>(
     /**
      * Install a plugin
      */
-    static use(plugin: Plugin<T>, options?: Record<string, any>): void {
+    static use(plugin: Plugin<T>, options?: Record<string, unknown>): void {
       this.hooks.use(plugin, options);
     }
 
@@ -1663,7 +1686,7 @@ export function createModelClass<T = any>(
      * Increment a counter field for a record atomically
      */
     static async incrementField(
-      recordKey: string | Record<string, any>,
+      recordKey: string | Record<string, unknown>,
       field: string,
       amount: number | bigint = 1,
     ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
@@ -1674,7 +1697,7 @@ export function createModelClass<T = any>(
      * Increment multiple counter fields atomically
      */
     static async incrementFields(
-      recordKey: string | Record<string, any>,
+      recordKey: string | Record<string, unknown>,
       fields: Record<string, number | bigint>,
     ): Promise<import("./atomic-types.ts").AtomicTransactionResult> {
       return await this.atomicUtils().incrementFields(recordKey, fields);
@@ -1684,7 +1707,7 @@ export function createModelClass<T = any>(
      * Get all counter values for a record
      */
     static async getCounters(
-      recordKey: string | Record<string, any>,
+      recordKey: string | Record<string, unknown>,
     ): Promise<Record<string, bigint>> {
       return await this.atomicUtils().getCounters(recordKey);
     }
@@ -1693,7 +1716,7 @@ export function createModelClass<T = any>(
      * Create a counter for a specific field
      */
     static createFieldCounter(
-      recordKey: string | Record<string, any>,
+      recordKey: string | Record<string, unknown>,
       field: string,
     ): import("./atomic-utils.ts").AtomicCounter {
       return this.atomicUtils().createFieldCounter(recordKey, field);
@@ -1888,10 +1911,10 @@ export function createModelClass<T = any>(
                 > = {
                   ...value,
                   value: value.value
-                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    ? new DynamicModel(value.value as T) as DynamicModel & T
                     : null,
                   previousValue: value.previousValue
-                    ? new DynamicModel(value.previousValue as any) as
+                    ? new DynamicModel(value.previousValue as T) as
                       & DynamicModel
                       & T
                     : null,
@@ -1915,7 +1938,10 @@ export function createModelClass<T = any>(
         stop: result.stop,
         on: (
           callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
-        ) => result.on(callback as any),
+        ) =>
+          result.on(
+            callback as import("./watch-types.ts").WatchCallback<unknown>,
+          ),
         toSSE: result.toSSE,
         toWebSocket: result.toWebSocket,
       };
@@ -1955,10 +1981,10 @@ export function createModelClass<T = any>(
                 > = {
                   ...value,
                   value: value.value
-                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    ? new DynamicModel(value.value as T) as DynamicModel & T
                     : null,
                   previousValue: value.previousValue
-                    ? new DynamicModel(value.previousValue as any) as
+                    ? new DynamicModel(value.previousValue as T) as
                       & DynamicModel
                       & T
                     : null,
@@ -1982,7 +2008,10 @@ export function createModelClass<T = any>(
         stop: result.stop,
         on: (
           callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
-        ) => result.on(callback as any),
+        ) =>
+          result.on(
+            callback as import("./watch-types.ts").WatchCallback<unknown>,
+          ),
         toSSE: result.toSSE,
         toWebSocket: result.toWebSocket,
       };
@@ -2021,10 +2050,10 @@ export function createModelClass<T = any>(
                 > = {
                   ...value,
                   value: value.value
-                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    ? new DynamicModel(value.value as T) as DynamicModel & T
                     : null,
                   previousValue: value.previousValue
-                    ? new DynamicModel(value.previousValue as any) as
+                    ? new DynamicModel(value.previousValue as T) as
                       & DynamicModel
                       & T
                     : null,
@@ -2048,7 +2077,10 @@ export function createModelClass<T = any>(
         stop: result.stop,
         on: (
           callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
-        ) => result.on(callback as any),
+        ) =>
+          result.on(
+            callback as import("./watch-types.ts").WatchCallback<unknown>,
+          ),
         toSSE: result.toSSE,
         toWebSocket: result.toWebSocket,
       };
@@ -2097,10 +2129,10 @@ export function createModelClass<T = any>(
                 > = {
                   ...value,
                   value: value.value
-                    ? new DynamicModel(value.value as any) as DynamicModel & T
+                    ? new DynamicModel(value.value as T) as DynamicModel & T
                     : null,
                   previousValue: value.previousValue
-                    ? new DynamicModel(value.previousValue as any) as
+                    ? new DynamicModel(value.previousValue as T) as
                       & DynamicModel
                       & T
                     : null,
@@ -2124,7 +2156,10 @@ export function createModelClass<T = any>(
         stop: result.stop,
         on: (
           callback: import("./watch-types.ts").WatchCallback<DynamicModel & T>,
-        ) => result.on(callback as any),
+        ) =>
+          result.on(
+            callback as import("./watch-types.ts").WatchCallback<unknown>,
+          ),
         toSSE: result.toSSE,
         toWebSocket: result.toWebSocket,
       };

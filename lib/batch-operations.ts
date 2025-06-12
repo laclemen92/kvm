@@ -16,7 +16,7 @@ import { deleteKey } from "./delete.ts";
 import { findUnique } from "./find.ts";
 import { buildPrimaryKey } from "./utils.ts";
 import { TTL } from "./ttl-utils.ts";
-import type { TTLValue } from "./model-types.ts";
+import type { TTLValue as _TTLValue } from "./model-types.ts";
 import {
   KVMBatchOperationError,
   KVMBatchValidationError,
@@ -27,11 +27,11 @@ import {
 /**
  * Validates a batch of items against a schema
  */
-export async function validateBatch<T>(
+export function validateBatch<T>(
   items: T[],
   entity: KVMEntity,
-  modelName?: string,
-): Promise<BatchValidationResult<T>> {
+  _modelName?: string,
+): BatchValidationResult<T> {
   const results: BatchValidationResult<T> = {
     valid: [],
     invalid: [],
@@ -50,8 +50,13 @@ export async function validateBatch<T>(
     } catch (error) {
       const validationErrors = [];
 
-      if ((error as any).name === "ZodError" && (error as any).errors) {
-        for (const zodError of (error as any).errors) {
+      if (
+        (error as Error & { name: string; errors?: unknown[] }).name ===
+          "ZodError" && (error as Error & { errors?: unknown[] }).errors
+      ) {
+        for (
+          const zodError of (error as Error & { errors: unknown[] }).errors
+        ) {
           validationErrors.push({
             field: zodError.path?.join(".") || "unknown",
             message: zodError.message,
@@ -62,7 +67,7 @@ export async function validateBatch<T>(
       } else {
         validationErrors.push({
           field: "unknown",
-          message: (error as any).message || "Validation failed",
+          message: (error as Error).message || "Validation failed",
           rule: "unknown",
         });
       }
@@ -189,7 +194,8 @@ export async function createMany<T>(
               if (
                 secondaryIndex.valueType === "KEY" && secondaryIndex.valueKey
               ) {
-                const value = (item as any)[secondaryIndex.valueKey];
+                const value =
+                  (item as Record<string, unknown>)[secondaryIndex.valueKey];
                 atomicOp.set(
                   secondaryKey,
                   value,
@@ -218,7 +224,8 @@ export async function createMany<T>(
               );
 
               if (relation.valueType === "KEY" && relation.valueKey) {
-                const value = (item as any)[relation.valueKey];
+                const value =
+                  (item as Record<string, unknown>)[relation.valueKey];
                 atomicOp.set(
                   relationKey,
                   value,
@@ -385,7 +392,7 @@ export async function updateMany<T>(
     if (atomic && chunk.length > 1) {
       // Atomic batch update - first fetch all existing records
       const existingRecords: Array<
-        { update: BatchUpdateInput<T>; existing: any; index: number }
+        { update: BatchUpdateInput<T>; existing: T; index: number }
       > = [];
 
       for (let i = 0; i < chunk.length; i++) {
@@ -467,7 +474,9 @@ export async function updateMany<T>(
                 if (
                   secondaryIndex.valueType === "KEY" && secondaryIndex.valueKey
                 ) {
-                  const value = mergedData[secondaryIndex.valueKey];
+                  const value = (mergedData as Record<string, unknown>)[
+                    secondaryIndex.valueKey
+                  ];
                   atomicOp.set(
                     newSecondaryKey,
                     value,
@@ -628,7 +637,7 @@ export async function deleteMany<T>(
     if (atomic && chunk.length > 1) {
       // Fetch existing records if needed
       const existingRecords: Array<
-        { key: BatchDeleteInput; existing: any; index: number }
+        { key: BatchDeleteInput; existing: T; index: number }
       > = [];
 
       for (let i = 0; i < chunk.length; i++) {
@@ -684,7 +693,7 @@ export async function deleteMany<T>(
               (deleteItem.options?.cascadeDelete ?? cascadeDelete) &&
               entity.relations
             ) {
-              for (const relation of entity.relations) {
+              for (const _relation of entity.relations) {
                 const relationKey = buildPrimaryKey(
                   entity.primaryKey,
                   existing,

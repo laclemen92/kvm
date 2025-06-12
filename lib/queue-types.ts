@@ -1,6 +1,6 @@
 // Queue System Types for KVM
 
-export interface QueueJob<TData = any> {
+export interface QueueJob<TData = unknown> {
   id: string;
   type: string;
   data: TData;
@@ -39,7 +39,7 @@ export interface WorkerOptions {
   timeout?: number;
   autoStart?: boolean;
   onError?: (error: Error, job: QueueJob) => Promise<void> | void;
-  onJobComplete?: (job: QueueJob, result?: any) => Promise<void> | void;
+  onJobComplete?: (job: QueueJob, result?: unknown) => Promise<void> | void;
   onJobFailed?: (job: QueueJob, error: Error) => Promise<void> | void;
   onJobRetry?: (job: QueueJob, error: Error) => Promise<void> | void;
 }
@@ -53,7 +53,7 @@ export interface QueueStats {
   total: number;
 }
 
-export interface JobProcessor<TData = any, TResult = any> {
+export interface JobProcessor<TData = unknown, TResult = unknown> {
   (job: QueueJob<TData>): Promise<TResult> | TResult;
 }
 
@@ -102,7 +102,7 @@ export type JobStatus =
   | "delayed"
   | "retrying";
 
-export interface QueueWorker<TData = any, TResult = any> {
+export interface QueueWorker<TData = unknown, TResult = unknown> {
   start(): Promise<void>;
   stop(): Promise<void>;
   pause(): Promise<void>;
@@ -114,11 +114,11 @@ export interface QueueWorker<TData = any, TResult = any> {
     failed: number;
     active: number;
   };
-  on(event: string, listener: (...args: any[]) => void): void;
-  off(event: string, listener: (...args: any[]) => void): void;
+  on(event: string, listener: (...args: unknown[]) => void): void;
+  off(event: string, listener: (...args: unknown[]) => void): void;
 }
 
-export interface Queue<TData = any> {
+export interface Queue<TData = unknown> {
   name: string;
 
   enqueue(
@@ -159,7 +159,7 @@ export interface Queue<TData = any> {
   ): Promise<QueueJob<TData>[]>;
 
   // Job completion methods (used by workers)
-  completeJob(jobId: string, result?: any): Promise<void>;
+  completeJob(jobId: string, result?: unknown): Promise<void>;
   failJob(jobId: string, error: Error): Promise<void>;
 }
 

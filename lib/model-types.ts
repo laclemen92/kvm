@@ -1,5 +1,5 @@
 import type { ZodObject, ZodRawShape } from "zod";
-import { z } from "zod";
+import type { z } from "zod";
 import type {
   FindManyOptions,
   IncludePath,
@@ -28,8 +28,8 @@ import type {
 import type {
   DateRangeOptions,
   ListOptions,
-  ListResult,
-  PaginatedResult,
+  ListResult as _ListResult,
+  PaginatedResult as _PaginatedResult,
   PaginationOptions,
 } from "./list-operations.ts";
 
@@ -79,7 +79,7 @@ export interface FindOptions {
 /**
  * Model document with instance methods
  */
-export interface ModelDocument<T = any> {
+export interface ModelDocument<T = Record<string, unknown>> {
   save(options?: UpdateOptions): Promise<this>;
   delete(options?: DeleteOptions): Promise<void>;
   update(data: Partial<T>, options?: UpdateOptions): Promise<this>;
@@ -105,7 +105,7 @@ export interface ModelDocument<T = any> {
 /**
  * Static model methods
  */
-export interface ModelStatic<T = any> {
+export interface ModelStatic<T = Record<string, unknown>> {
   create(data: T, options?: CreateOptions): Promise<ModelDocument<T> & T>;
   findById(
     id: string,
@@ -116,12 +116,12 @@ export interface ModelStatic<T = any> {
     options?: FindOptions,
   ): Promise<ModelDocument<T> & T>;
   findUnique(
-    key: string | Deno.KvKeyPart | Record<string, any>,
+    key: string | Deno.KvKeyPart | Record<string, unknown>,
     secondaryIndexName?: string,
     includeValue?: boolean,
   ): Promise<(ModelDocument<T> & T) | null>;
   findUniqueOrThrow(
-    key: string | Deno.KvKeyPart | Record<string, any>,
+    key: string | Deno.KvKeyPart | Record<string, unknown>,
     secondaryIndexName?: string,
     includeValue?: boolean,
   ): Promise<ModelDocument<T> & T>;
@@ -155,14 +155,14 @@ export interface ModelStatic<T = any> {
     options?: UpdateOptions,
   ): Promise<ModelDocument<T> & T>;
   upsert(
-    findCriteria: Record<string, any>,
+    findCriteria: Record<string, unknown>,
     updateData: Partial<T>,
     createData: T,
     options?: CreateOptions | UpdateOptions,
   ): Promise<ModelDocument<T> & T>;
   upsertMany(
     operations: Array<{
-      findCriteria: Record<string, any>;
+      findCriteria: Record<string, unknown>;
       updateData: Partial<T>;
       createData: T;
       options?: CreateOptions | UpdateOptions;
@@ -189,12 +189,12 @@ export interface ModelStatic<T = any> {
   // Middleware/Hooks methods
   pre(type: HookType, fn: PreHookFunction<T>, options?: HookOptions): void;
   post(type: HookType, fn: PostHookFunction<T>, options?: HookOptions): void;
-  use(plugin: Plugin<T>, options?: Record<string, any>): void;
+  use(plugin: Plugin<T>, options?: Record<string, unknown>): void;
   unuse(plugin: Plugin<T>): void;
   removeHook(id: string): boolean;
   removeHooks(type: HookType, timing?: "pre" | "post"): number;
   clearHooks(): void;
-  getHooks(type?: HookType, timing?: "pre" | "post"): any[];
+  getHooks(type?: HookType, timing?: "pre" | "post"): HookFunction[];
   setHooksEnabled(enabled: boolean): void;
   areHooksEnabled(): boolean;
 
@@ -219,19 +219,19 @@ export interface ModelStatic<T = any> {
   // Atomic utilities methods
   atomicUtils(): import("./atomic-utils.ts").ModelAtomicUtils;
   incrementField(
-    recordKey: string | Record<string, any>,
+    recordKey: string | Record<string, unknown>,
     field: string,
     amount?: number | bigint,
   ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
   incrementFields(
-    recordKey: string | Record<string, any>,
+    recordKey: string | Record<string, unknown>,
     fields: Record<string, number | bigint>,
   ): Promise<import("./atomic-types.ts").AtomicTransactionResult>;
   getCounters(
-    recordKey: string | Record<string, any>,
+    recordKey: string | Record<string, unknown>,
   ): Promise<Record<string, bigint>>;
   createFieldCounter(
-    recordKey: string | Record<string, any>,
+    recordKey: string | Record<string, unknown>,
     field: string,
   ): import("./atomic-utils.ts").AtomicCounter;
   createCounter(key: Deno.KvKey): import("./atomic-utils.ts").AtomicCounter;
@@ -262,7 +262,8 @@ export interface ModelStatic<T = any> {
 /**
  * Model constructor type
  */
-export interface ModelConstructor<T = any> extends ModelStatic<T> {
+export interface ModelConstructor<T = Record<string, unknown>>
+  extends ModelStatic<T> {
   new (data: T): ModelDocument<T> & T;
   entity: KVMEntity;
   kv: Deno.Kv;
@@ -273,7 +274,9 @@ export interface ModelConstructor<T = any> extends ModelStatic<T> {
 /**
  * Type to infer the TypeScript type from a Zod schema
  */
-export type InferModel<TSchema extends ZodObject<any>> = z.infer<TSchema>;
+export type InferModel<TSchema extends ZodObject<ZodRawShape>> = z.infer<
+  TSchema
+>;
 
 /**
  * Model-specific list result that contains model instances instead of raw KV entries

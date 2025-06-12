@@ -11,13 +11,12 @@ import type {
   WatchRelationOptions,
   WatchResult,
   WatchState,
-  WatchStream,
+  WatchStream as _WatchStream,
   WebSocketOptions,
 } from "./watch-types.ts";
 import { WatchEventType } from "./watch-types.ts";
 import { WatchUtils } from "./watch-utils.ts";
 import { findMany } from "./find.ts";
-import { buildPrimaryKey } from "./utils.ts";
 
 /**
  * Core watch functionality for KVM entities
@@ -30,36 +29,41 @@ export class WatchManager {
   /**
    * Watch a single record by ID
    */
-  async watch<T extends ZodRawShape = {}>(
+  async watch<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
-    id: string | Record<string, any>,
+    id: string | Record<string, unknown>,
     options: WatchOptions = {},
   ): Promise<WatchResult<T>> {
     const key = WatchUtils.generateWatchKey(entity, id);
-    return this.watchKeys(entity, [key], options);
+    return await this.watchKeys(entity, [key], options);
   }
 
   /**
    * Watch multiple records by IDs
    */
-  async watchMany<T extends ZodRawShape = {}>(
+  async watchMany<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
-    ids: (string | Record<string, any>)[],
+    ids: (string | Record<string, unknown>)[],
     options: WatchOptions = {},
   ): Promise<WatchResult<T>> {
     const keys = WatchUtils.generateWatchKeys(entity, ids);
-    return this.watchKeys(entity, keys, options);
+    return await this.watchKeys(entity, keys, options);
   }
 
   /**
    * Watch records matching a query
    */
-  async watchQuery<T extends ZodRawShape = {}>(
+  async watchQuery<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
     options: WatchManyOptions = {},
   ): Promise<WatchResult<T>> {
-    const { where, limit = 10, prefix, watchAll = false, ...watchOptions } =
-      options;
+    const {
+      where: _where,
+      limit = 10,
+      prefix,
+      watchAll = false,
+      ...watchOptions
+    } = options;
 
     // First, find the records that match the criteria
     const findOptions = {
@@ -81,7 +85,7 @@ export class WatchManager {
       // Get the primary key value from the record
       const primaryKeyDef = entity.primaryKey[0];
       const primaryKeyValue = primaryKeyDef.key
-        ? (record.value as any)[primaryKeyDef.key]
+        ? (record.value as Record<string, unknown>)[primaryKeyDef.key]
         : record.value;
       return WatchUtils.generateWatchKey(entity, primaryKeyValue);
     });
@@ -97,13 +101,17 @@ export class WatchManager {
   /**
    * Watch related records for a given entity instance
    */
-  async watchRelations<T extends ZodRawShape = {}>(
+  async watchRelations<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
-    id: string | Record<string, any>,
+    id: string | Record<string, unknown>,
     options: WatchRelationOptions,
   ): Promise<WatchResult<T>> {
-    const { relation, includeRelated = true, depth = 1, ...watchOptions } =
-      options;
+    const {
+      relation,
+      includeRelated = true,
+      depth: _depth = 1,
+      ...watchOptions
+    } = options;
 
     if (!entity.relations) {
       throw new Error(`Entity ${entity.name} has no relations defined`);
@@ -130,17 +138,21 @@ export class WatchManager {
     }
 
     const allKeys = includeRelated ? [mainKey, ...relatedKeys] : [mainKey];
-    return this.watchKeys(entity, allKeys, watchOptions);
+    return await this.watchKeys(entity, allKeys, watchOptions);
   }
 
   /**
    * Watch multiple entities in a single stream
    * NOTE: This is a placeholder implementation - full batch watching requires entity registry
    */
-  async watchBatch(
+  watchBatch(
     options: BatchWatchOptions,
-  ): Promise<ReadableStream<BatchWatchEvent>> {
-    const { entities, global = {}, maxKeys = 50 } = options;
+  ): ReadableStream<BatchWatchEvent> {
+    const {
+      entities: _entities,
+      global: _global = {},
+      maxKeys: _maxKeys = 50,
+    } = options;
 
     // This would need entity registry to resolve entity definitions
     // For now, we'll throw an error indicating this needs implementation
@@ -152,7 +164,7 @@ export class WatchManager {
   /**
    * Watch keys directly
    */
-  private async watchKeys<T extends ZodRawShape = {}>(
+  private async watchKeys<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
     keys: Deno.KvKey[],
     options: WatchOptions = {},
@@ -180,7 +192,7 @@ export class WatchManager {
       keys.map((key) => this.kv.get(key)),
     );
 
-    let previousValues = new Map<string, T | null>();
+    const previousValues = new Map<string, T | null>();
 
     // Store initial values
     initialEntries.forEach((entry, index) => {
@@ -188,9 +200,8 @@ export class WatchManager {
       previousValues.set(keyStr, entry.value as T | null);
     });
 
-    const watchManager = this;
     const stream = new ReadableStream<WatchEvent<T>>({
-      start(controller) {
+      start: (controller) => {
         state.controller = controller;
 
         // Emit initial events for existing values
@@ -208,7 +219,7 @@ export class WatchManager {
         });
 
         // Start watching
-        watchManager.startWatching(
+        this.startWatching(
           keys,
           controller,
           state,
@@ -219,8 +230,8 @@ export class WatchManager {
         ).catch((error) => controller.error(error));
       },
 
-      cancel() {
-        watchManager.stopWatch(watchId);
+      cancel: () => {
+        this.stopWatch(watchId);
       },
     });
 
@@ -256,7 +267,7 @@ export class WatchManager {
   /**
    * Start the actual watching process
    */
-  private async startWatching<T extends ZodRawShape = {}>(
+  private async startWatching<T extends ZodRawShape = ZodRawShape>(
     keys: Deno.KvKey[],
     controller: ReadableStreamDefaultController<WatchEvent<T>>,
     state: WatchState,
@@ -361,7 +372,7 @@ export class WatchManager {
   /**
    * Create an empty watch result for when no records match
    */
-  private createEmptyWatchResult<T>(modelName: string): WatchResult<T> {
+  private createEmptyWatchResult<T>(_modelName: string): WatchResult<T> {
     const stream = new ReadableStream<WatchEvent<T>>({
       start(controller) {
         controller.close();
@@ -424,37 +435,37 @@ export function getWatchManager(): WatchManager {
 /**
  * Functional API for watching individual records
  */
-export async function watchRecord<T extends ZodRawShape = {}>(
+export async function watchRecord<T extends ZodRawShape = ZodRawShape>(
   entity: KVMEntity<T>,
   kv: Deno.Kv,
-  id: string | Record<string, any>,
+  id: string | Record<string, unknown>,
   options: WatchOptions = {},
 ): Promise<WatchResult<T>> {
   const manager = new WatchManager(kv);
-  return manager.watch(entity, id, options);
+  return await manager.watch(entity, id, options);
 }
 
 /**
  * Functional API for watching multiple records
  */
-export async function watchRecords<T extends ZodRawShape = {}>(
+export async function watchRecords<T extends ZodRawShape = ZodRawShape>(
   entity: KVMEntity<T>,
   kv: Deno.Kv,
-  ids: (string | Record<string, any>)[],
+  ids: (string | Record<string, unknown>)[],
   options: WatchOptions = {},
 ): Promise<WatchResult<T>> {
   const manager = new WatchManager(kv);
-  return manager.watchMany(entity, ids, options);
+  return await manager.watchMany(entity, ids, options);
 }
 
 /**
  * Functional API for watching records matching a query
  */
-export async function watchQuery<T extends ZodRawShape = {}>(
+export async function watchQuery<T extends ZodRawShape = ZodRawShape>(
   entity: KVMEntity<T>,
   kv: Deno.Kv,
   options: WatchManyOptions = {},
 ): Promise<WatchResult<T>> {
   const manager = new WatchManager(kv);
-  return manager.watchQuery(entity, options);
+  return await manager.watchQuery(entity, options);
 }

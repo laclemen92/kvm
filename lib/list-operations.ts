@@ -3,7 +3,6 @@
  */
 
 import type { KVMEntity } from "./types.ts";
-import { buildPrimaryKey } from "./utils.ts";
 
 /**
  * Options for advanced list operations
@@ -269,8 +268,6 @@ export async function count(
   kv: Deno.Kv,
   options?: Omit<ListOptions, "limit" | "cursor">,
 ): Promise<number> {
-  let total = 0;
-
   // Use list operation with no limit to count all matching records
   const result = await list(entity, kv, {
     ...options,

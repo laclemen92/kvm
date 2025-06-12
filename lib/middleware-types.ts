@@ -27,7 +27,7 @@ export type HookTiming = "pre" | "post";
 /**
  * Context passed to hooks with operation details
  */
-export interface HookContext<T = any> {
+export interface HookContext<T = unknown> {
   /** The model name */
   modelName: string;
   /** The operation type */
@@ -35,11 +35,11 @@ export interface HookContext<T = any> {
   /** The document being operated on (may be undefined for pre-create) */
   document?: ModelDocument<T> & T;
   /** The input data for create/update operations */
-  input?: Partial<T> | any;
+  input?: Partial<T> | unknown;
   /** Query conditions for find operations */
-  conditions?: Record<string, any>;
+  conditions?: Record<string, unknown>;
   /** Additional options passed to the operation */
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
   /** Whether this hook is running in a transaction */
   isTransaction?: boolean;
 }
@@ -48,7 +48,7 @@ export interface HookContext<T = any> {
  * Pre-hook function signature
  * Pre-hooks can modify the document/input and call next() to continue
  */
-export type PreHookFunction<T = any> = (
+export type PreHookFunction<T = unknown> = (
   this: (ModelDocument<T> & T) | undefined,
   context: HookContext<T>,
   next: (error?: Error) => void,
@@ -58,16 +58,18 @@ export type PreHookFunction<T = any> = (
  * Post-hook function signature
  * Post-hooks receive the final document and cannot modify the operation
  */
-export type PostHookFunction<T = any> = (
+export type PostHookFunction<T = unknown> = (
   this: (ModelDocument<T> & T) | undefined,
   context: HookContext<T>,
-  result: any,
+  result: unknown,
 ) => void | Promise<void>;
 
 /**
  * Hook function - can be either pre or post
  */
-export type HookFunction<T = any> = PreHookFunction<T> | PostHookFunction<T>;
+export type HookFunction<T = unknown> =
+  | PreHookFunction<T>
+  | PostHookFunction<T>;
 
 /**
  * Hook registration options
@@ -88,7 +90,7 @@ export interface HookOptions {
 /**
  * Registered hook with metadata
  */
-export interface RegisteredHook<T = any> {
+export interface RegisteredHook<T = unknown> {
   /** The hook function */
   fn: HookFunction<T>;
   /** Hook timing */
@@ -120,7 +122,7 @@ export interface HookExecutionResult {
 /**
  * Hook manager interface for registering and executing hooks
  */
-export interface HookManager<T = any> {
+export interface HookManager<T = unknown> {
   /** Register a pre-hook */
   pre(type: HookType, fn: PreHookFunction<T>, options?: HookOptions): void;
 
@@ -147,7 +149,7 @@ export interface HookManager<T = any> {
   executePostHooks(
     type: HookType,
     context: HookContext<T>,
-    result: any,
+    result: unknown,
     document?: ModelDocument<T> & T,
   ): Promise<HookExecutionResult>;
 
@@ -164,13 +166,13 @@ export interface HookManager<T = any> {
 /**
  * Plugin interface for extending models with reusable functionality
  */
-export interface Plugin<T = any> {
+export interface Plugin<T = unknown> {
   /** Plugin name */
   name: string;
   /** Plugin version */
   version?: string;
   /** Install the plugin on a model */
-  install(hooks: HookManager<T>, options?: Record<string, any>): void;
+  install(hooks: HookManager<T>, options?: Record<string, unknown>): void;
   /** Uninstall the plugin from a model */
   uninstall?(hooks: HookManager<T>): void;
 }
@@ -202,7 +204,7 @@ export interface ValidationPluginOptions {
   /** Custom validation rules */
   rules?: Record<
     string,
-    (value: any, document: any) => boolean | Promise<boolean>
+    (value: unknown, document: unknown) => boolean | Promise<boolean>
   >;
   /** Whether to stop on first validation error */
   stopOnFirstError?: boolean;
@@ -244,5 +246,5 @@ export class HookTimeoutError extends Error {
 /**
  * Utility type for hook function type checking
  */
-export type IsPreHook<T> = T extends PreHookFunction<any> ? true : false;
-export type IsPostHook<T> = T extends PostHookFunction<any> ? true : false;
+export type IsPreHook<T> = T extends PreHookFunction<unknown> ? true : false;
+export type IsPostHook<T> = T extends PostHookFunction<unknown> ? true : false;

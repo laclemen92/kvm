@@ -1,5 +1,11 @@
-import type { FindManyOptions, KVMEntity } from "./types.ts";
-import type { QueryBuilder, WhereClause } from "./query-types.ts";
+import type {
+  FindManyOptions as _FindManyOptions,
+  KVMEntity as _KVMEntity,
+} from "./types.ts";
+import type {
+  QueryBuilder as _QueryBuilder,
+  WhereClause,
+} from "./query-types.ts";
 
 /**
  * Options for watching individual records
@@ -16,7 +22,7 @@ export type WatchOptions = {
  */
 export type WatchManyOptions = WatchOptions & {
   /** Filter conditions for which records to watch */
-  where?: WhereClause<any>;
+  where?: WhereClause<unknown>;
   /** Maximum number of records to watch simultaneously */
   limit?: number;
   /** Prefix to filter by */
@@ -40,7 +46,7 @@ export type WatchRelationOptions = WatchOptions & {
 /**
  * Represents a change event from the watch stream
  */
-export type WatchEvent<T = any> = {
+export type WatchEvent<T = unknown> = {
   /** The type of change that occurred */
   type: WatchEventType;
   /** The key that changed */
@@ -70,7 +76,7 @@ export enum WatchEventType {
 /**
  * Watch stream that can be consumed with async iteration
  */
-export type WatchStream<T = any> = ReadableStream<WatchEvent<T>>;
+export type WatchStream<T = unknown> = ReadableStream<WatchEvent<T>>;
 
 /**
  * Options for Server-Sent Events integration
@@ -105,14 +111,14 @@ export type WebSocketOptions = {
 /**
  * Function type for watch event callbacks
  */
-export type WatchCallback<T = any> = (
+export type WatchCallback<T = unknown> = (
   event: WatchEvent<T>,
 ) => void | Promise<void>;
 
 /**
  * Watch result that includes both stream and control methods
  */
-export type WatchResult<T = any> = {
+export type WatchResult<T = unknown> = {
   /** The watch stream for async iteration */
   stream: WatchStream<T>;
   /** Method to stop watching */

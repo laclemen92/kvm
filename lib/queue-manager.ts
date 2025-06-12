@@ -18,18 +18,18 @@ export class KVMQueueManager implements QueueManager {
 
   constructor(private readonly kv: Deno.Kv) {}
 
-  private getQueue<TData = any>(queueName: string): KVMQueue<TData> {
+  private getQueue<TData = unknown>(queueName: string): KVMQueue<TData> {
     if (!this.queues.has(queueName)) {
       this.queues.set(queueName, new KVMQueue<TData>(queueName, this.kv));
     }
     return this.queues.get(queueName) as KVMQueue<TData>;
   }
 
-  queue<TData = any>(queueName: string): Queue<TData> {
+  queue<TData = unknown>(queueName: string): Queue<TData> {
     return this.getQueue<TData>(queueName);
   }
 
-  async enqueue<TData>(
+  enqueue<TData>(
     queueName: string,
     job: Omit<QueueJob<TData>, "id" | "createdAt" | "retryCount">,
     options?: EnqueueOptions,
@@ -38,7 +38,7 @@ export class KVMQueueManager implements QueueManager {
     return queue.enqueue(job, options);
   }
 
-  async enqueueMany<TData>(
+  enqueueMany<TData>(
     queueName: string,
     jobs: Array<Omit<QueueJob<TData>, "id" | "createdAt" | "retryCount">>,
     options?: EnqueueOptions,
@@ -47,17 +47,17 @@ export class KVMQueueManager implements QueueManager {
     return queue.enqueueMany(jobs, options);
   }
 
-  async dequeue(queueName: string): Promise<QueueJob | null> {
+  dequeue(queueName: string): Promise<QueueJob | null> {
     const queue = this.getQueue(queueName);
     return queue.dequeue();
   }
 
-  async getJob(queueName: string, jobId: string): Promise<QueueJob | null> {
+  getJob(queueName: string, jobId: string): Promise<QueueJob | null> {
     const queue = this.getQueue(queueName);
     return queue.getJob(jobId);
   }
 
-  async getJobs(
+  getJobs(
     queueName: string,
     status?: JobStatus[],
     limit?: number,
@@ -67,17 +67,17 @@ export class KVMQueueManager implements QueueManager {
     return queue.getJobs(status, limit, offset);
   }
 
-  async getStats(queueName: string): Promise<QueueStats> {
+  getStats(queueName: string): Promise<QueueStats> {
     const queue = this.getQueue(queueName);
     return queue.getStats();
   }
 
-  async removeJob(queueName: string, jobId: string): Promise<boolean> {
+  removeJob(queueName: string, jobId: string): Promise<boolean> {
     const queue = this.getQueue(queueName);
     return queue.removeJob(jobId);
   }
 
-  async clearQueue(queueName: string, status?: JobStatus[]): Promise<number> {
+  clearQueue(queueName: string, status?: JobStatus[]): Promise<number> {
     const queue = this.getQueue(queueName);
     return queue.clear(status);
   }
@@ -203,7 +203,7 @@ export class KVMQueueManager implements QueueManager {
         if (!healthy) {
           overallHealthy = false;
         }
-      } catch (error) {
+      } catch (_error) {
         queues[queueName] = {
           healthy: false,
           stats: {

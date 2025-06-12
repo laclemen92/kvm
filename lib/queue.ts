@@ -14,7 +14,7 @@ import type {
 import { JobNotFoundError, QueueError } from "./queue-types.ts";
 import { QueueWorkerImpl } from "./queue-worker.ts";
 
-export class KVMQueue<TData = any> implements Queue<TData> {
+export class KVMQueue<TData = unknown> implements Queue<TData> {
   constructor(
     public readonly name: string,
     private readonly kv: Deno.Kv,
@@ -108,8 +108,8 @@ export class KVMQueue<TData = any> implements Queue<TData> {
       atomic.check(statsEntry);
       atomic.set(statsKey, newStats);
 
-      const result = await atomic.commit();
-      if (result.ok) {
+      const _result = await atomic.commit();
+      if (_result.ok) {
         return queueJob;
       }
 
@@ -186,8 +186,8 @@ export class KVMQueue<TData = any> implements Queue<TData> {
     };
     atomic.set(this.getStatsKey(), newStats);
 
-    const result = await atomic.commit();
-    if (!result.ok) {
+    const _result = await atomic.commit();
+    if (!_result.ok) {
       throw new QueueError(
         `Failed to enqueue ${jobs.length} jobs in queue ${this.name}`,
       );
@@ -200,7 +200,7 @@ export class KVMQueue<TData = any> implements Queue<TData> {
     jobs: Array<Omit<QueueJob<TData>, "id" | "createdAt" | "retryCount">>,
     options: EnqueueOptions = {},
   ): Promise<QueueJob<TData>[]> {
-    return this.enqueueMany(jobs, { ...options, atomic: true });
+    return await this.enqueueMany(jobs, { ...options, atomic: true });
   }
 
   async dequeue(): Promise<QueueJob<TData> | null> {
@@ -268,8 +268,8 @@ export class KVMQueue<TData = any> implements Queue<TData> {
     };
     atomic.set(this.getStatsKey(), newStats);
 
-    const result = await atomic.commit();
-    if (!result.ok) {
+    const _result = await atomic.commit();
+    if (!_result.ok) {
       // Retry once
       await new Promise((resolve) => setTimeout(resolve, 100));
       return this.dequeue();
@@ -438,13 +438,16 @@ export class KVMQueue<TData = any> implements Queue<TData> {
     const jobStatus = this.getJobStatus(job);
     const newStats: QueueStats = {
       ...currentStats,
-      [jobStatus]: Math.max(0, (currentStats as any)[jobStatus] - 1),
+      [jobStatus]: Math.max(
+        0,
+        (currentStats as Record<string, number>)[jobStatus] - 1,
+      ),
       total: Math.max(0, currentStats.total - 1),
     };
     atomic.set(this.getStatsKey(), newStats);
 
-    const result = await atomic.commit();
-    return result.ok;
+    const _result = await atomic.commit();
+    return _result.ok;
   }
 
   private getJobStatus(job: QueueJob<TData>): JobStatus {
@@ -477,7 +480,7 @@ export class KVMQueue<TData = any> implements Queue<TData> {
   }
 
   // Job completion methods for worker use
-  async completeJob(jobId: string, jobResult?: any): Promise<void> {
+  async completeJob(jobId: string, _jobResult?: unknown): Promise<void> {
     const job = await this.getJob(jobId);
     if (!job) {
       throw new JobNotFoundError(this.name, jobId);
@@ -506,8 +509,8 @@ export class KVMQueue<TData = any> implements Queue<TData> {
     };
     atomic.set(this.getStatsKey(), newStats);
 
-    const result = await atomic.commit();
-    if (!result.ok) {
+    const _result = await atomic.commit();
+    if (!_result.ok) {
       throw new QueueError(
         `Failed to complete job ${jobId} in queue ${this.name}`,
       );

@@ -360,7 +360,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const existing = await findUnique(
       mutation.entity,
       this.kv,
-      mutation.key as any,
+      mutation.key as string | Deno.KvKeyPart | Record<string, unknown>,
     );
     if (!existing || !existing.value) {
       throw new Error(
@@ -394,7 +394,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const existing = await findUnique(
       mutation.entity,
       this.kv,
-      mutation.key as any,
+      mutation.key as string | Deno.KvKeyPart | Record<string, unknown>,
     );
     if (!existing || !existing.value) {
       throw new Error(
@@ -488,10 +488,10 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
   /**
    * Build create operation for atomic transaction
    */
-  private async buildCreateOperation(
+  private buildCreateOperation(
     atomic: Deno.AtomicOperation,
     mutation: AtomicCreateMutation,
-  ): Promise<void> {
+  ): void {
     const { entity, data, options } = mutation;
     const pk = buildPrimaryKey(entity.primaryKey, data);
 
@@ -508,7 +508,8 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         if (
           secondaryIndex.valueType === ValueType.KEY && secondaryIndex.valueKey
         ) {
-          const value = (data as any)[secondaryIndex.valueKey];
+          const value =
+            (data as Record<string, unknown>)[secondaryIndex.valueKey];
           atomic.set(secondaryKey, value, options);
         } else {
           atomic.set(secondaryKey, data, options);
@@ -525,7 +526,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         );
 
         if (relation.valueType === ValueType.KEY && relation.valueKey) {
-          const value = (data as any)[relation.valueKey];
+          const value = (data as Record<string, unknown>)[relation.valueKey];
           atomic.set(relationKey, value, options);
         } else {
           atomic.set(relationKey, data, options);
@@ -544,7 +545,11 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const { entity, key, data, options } = mutation;
 
     // Get existing record for merging and secondary index cleanup
-    const existing = await findUnique(entity, this.kv, key as any);
+    const existing = await findUnique(
+      entity,
+      this.kv,
+      key as string | Deno.KvKeyPart | Record<string, unknown>,
+    );
     if (!existing || !existing.value) {
       throw new Error(`Record not found for update: ${JSON.stringify(key)}`);
     }
@@ -569,7 +574,8 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
         if (
           secondaryIndex.valueType === ValueType.KEY && secondaryIndex.valueKey
         ) {
-          const value = (mergedData as any)[secondaryIndex.valueKey];
+          const value =
+            (mergedData as Record<string, unknown>)[secondaryIndex.valueKey];
           atomic.set(newSecondaryKey, value, { expireIn: options?.expireIn });
         } else {
           atomic.set(newSecondaryKey, mergedData, {
@@ -590,7 +596,11 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
     const { entity, key, options } = mutation;
 
     // Get existing record for secondary index cleanup
-    const existing = await findUnique(entity, this.kv, key as any);
+    const existing = await findUnique(
+      entity,
+      this.kv,
+      key as string | Deno.KvKeyPart | Record<string, unknown>,
+    );
     if (!existing || !existing.value) {
       throw new Error(`Record not found for delete: ${JSON.stringify(key)}`);
     }
@@ -611,7 +621,7 @@ export class KVMAtomicBuilder implements AtomicMutationBuilder {
 
     // Handle cascade deletes
     if (options?.cascadeDelete && entity.relations) {
-      for (const relation of entity.relations) {
+      for (const _relation of entity.relations) {
         const relationKey = buildPrimaryKey(
           entity.primaryKey, // Relations use the entity's primary key
           existing.value,

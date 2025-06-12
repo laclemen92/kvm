@@ -8,7 +8,7 @@
 /**
  * TTL time unit constants in milliseconds
  */
-export const TTL = {
+export const TTL: Record<string, number> = {
   /**
    * Time units for easy TTL calculations
    */
@@ -142,7 +142,7 @@ export const TTL = {
 /**
  * TTL configuration for common use cases
  */
-export const TTLConfig = {
+export const TTLConfig: Record<string, Record<string, number>> = {
   /**
    * User session management
    */
@@ -203,7 +203,7 @@ export const TTLConfig = {
  */
 export function withTTL(
   ttl: number | string,
-  baseOptions: Record<string, any> = {},
+  baseOptions: Record<string, unknown> = {},
 ): { expireIn: number } & typeof baseOptions {
   const expireIn = typeof ttl === "string" ? TTL.parse(ttl) : ttl;
 
@@ -222,8 +222,8 @@ export function withTTL(
  */
 export function sessionTTL(
   type: keyof typeof TTLConfig.SESSION = "STANDARD",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): Record<string, unknown> {
   return withTTL(TTLConfig.SESSION[type], baseOptions);
 }
 
@@ -232,8 +232,8 @@ export function sessionTTL(
  */
 export function cacheTTL(
   type: keyof typeof TTLConfig.CACHE = "STANDARD",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): Record<string, unknown> {
   return withTTL(TTLConfig.CACHE[type], baseOptions);
 }
 
@@ -242,8 +242,8 @@ export function cacheTTL(
  */
 export function tokenTTL(
   type: keyof typeof TTLConfig.TOKEN,
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): Record<string, unknown> {
   return withTTL(TTLConfig.TOKEN[type], baseOptions);
 }
 
@@ -252,7 +252,7 @@ export function tokenTTL(
  */
 export function temporaryTTL(
   type: keyof typeof TTLConfig.TEMPORARY = "FORM_DATA",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): Record<string, unknown> {
   return withTTL(TTLConfig.TEMPORARY[type], baseOptions);
 }

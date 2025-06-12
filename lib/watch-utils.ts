@@ -2,11 +2,11 @@ import type { KVMEntity } from "./types.ts";
 import type { ZodRawShape } from "zod";
 import type {
   SSEOptions,
-  WatchCallback,
+  WatchCallback as _WatchCallback,
   WatchEvent,
   WatchEventType,
-  WatchOptions,
-  WatchState,
+  WatchOptions as _WatchOptions,
+  WatchState as _WatchState,
   WebSocketOptions,
 } from "./watch-types.ts";
 import { WatchEventType as EventType } from "./watch-types.ts";
@@ -70,9 +70,9 @@ export class WatchUtils {
   /**
    * Generate key for watching a specific record
    */
-  static generateWatchKey<T extends ZodRawShape = {}>(
+  static generateWatchKey<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
-    id: string | Record<string, any>,
+    id: string | Record<string, unknown>,
   ): Deno.KvKey {
     if (typeof id === "string") {
       // Simple primary key
@@ -98,9 +98,9 @@ export class WatchUtils {
   /**
    * Generate multiple keys for batch watching
    */
-  static generateWatchKeys<T extends ZodRawShape = {}>(
+  static generateWatchKeys<T extends ZodRawShape = ZodRawShape>(
     entity: KVMEntity<T>,
-    ids: (string | Record<string, any>)[],
+    ids: (string | Record<string, unknown>)[],
   ): Deno.KvKey[] {
     return ids.map((id) => this.generateWatchKey(entity, id));
   }

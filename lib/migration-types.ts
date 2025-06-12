@@ -2,8 +2,6 @@
  * Types and interfaces for the KVM migration system
  */
 
-import type { KVMEntity } from "./types.ts";
-
 /**
  * A single migration definition
  */
@@ -158,7 +156,7 @@ export interface MigrationExecutionResult {
   /**
    * Any additional metadata about the execution
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -236,7 +234,7 @@ export interface MigrationUtils {
   addField(
     entityName: string,
     fieldName: string,
-    defaultValue: any,
+    defaultValue: unknown,
   ): Promise<void>;
 
   /**
@@ -259,7 +257,7 @@ export interface MigrationUtils {
   transformField(
     entityName: string,
     fieldName: string,
-    transformer: (value: any, record: any) => any,
+    transformer: (value: unknown, record: unknown) => unknown,
   ): Promise<void>;
 
   /**
@@ -293,7 +291,7 @@ export interface MigrationUtils {
   batchProcess(
     entityName: string,
     processor: (
-      records: Array<{ key: Deno.KvKey; value: any }>,
+      records: Array<{ key: Deno.KvKey; value: unknown }>,
     ) => Promise<void>,
     batchSize?: number,
   ): Promise<void>;
@@ -307,6 +305,20 @@ export interface MigrationUtils {
    * Restore an entity from a backup
    */
   restoreEntity(entityName: string, backupName: string): Promise<void>;
+
+  /**
+   * Create an index for an entity field
+   */
+  createIndex(
+    entityName: string,
+    fieldName: string,
+    indexName?: string,
+  ): Promise<void>;
+
+  /**
+   * Drop an index
+   */
+  dropIndex(indexName: string): Promise<void>;
 }
 
 /**

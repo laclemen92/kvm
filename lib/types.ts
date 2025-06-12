@@ -106,7 +106,7 @@ export type StringKeyedValueObject = {
 export type PopulateOptions = {
   path: string;
   select?: string[];
-  match?: Record<string, any>;
+  match?: Record<string, unknown>;
   options?: FindManyOptions;
 };
 

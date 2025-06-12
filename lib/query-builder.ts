@@ -2,8 +2,8 @@ import type {
   ComparisonOperator,
   QueryBuilder,
   QueryConfig,
-  QueryExecutor,
-  SortConfig,
+  QueryExecutor as _QueryExecutor,
+  SortConfig as _SortConfig,
   SortDirection,
   WhereClause,
   WhereCondition,
@@ -24,7 +24,7 @@ class WhereClauseImpl<T> implements WhereClause<T> {
 
   private addCondition(
     operator: ComparisonOperator,
-    value: any,
+    value: unknown,
   ): QueryBuilder<T> {
     this.queryBuilder.addWhereCondition({
       field: this.field,
@@ -34,59 +34,59 @@ class WhereClauseImpl<T> implements WhereClause<T> {
     return this.queryBuilder;
   }
 
-  equals(value: any): QueryBuilder<T> {
+  equals(value: unknown): QueryBuilder<T> {
     return this.addCondition("equals", value);
   }
 
-  eq(value: any): QueryBuilder<T> {
+  eq(value: unknown): QueryBuilder<T> {
     return this.addCondition("eq", value);
   }
 
-  notEquals(value: any): QueryBuilder<T> {
+  notEquals(value: unknown): QueryBuilder<T> {
     return this.addCondition("notEquals", value);
   }
 
-  ne(value: any): QueryBuilder<T> {
+  ne(value: unknown): QueryBuilder<T> {
     return this.addCondition("ne", value);
   }
 
-  greaterThan(value: any): QueryBuilder<T> {
+  greaterThan(value: unknown): QueryBuilder<T> {
     return this.addCondition("greaterThan", value);
   }
 
-  gt(value: any): QueryBuilder<T> {
+  gt(value: unknown): QueryBuilder<T> {
     return this.addCondition("gt", value);
   }
 
-  greaterThanOrEqual(value: any): QueryBuilder<T> {
+  greaterThanOrEqual(value: unknown): QueryBuilder<T> {
     return this.addCondition("greaterThanOrEqual", value);
   }
 
-  gte(value: any): QueryBuilder<T> {
+  gte(value: unknown): QueryBuilder<T> {
     return this.addCondition("gte", value);
   }
 
-  lessThan(value: any): QueryBuilder<T> {
+  lessThan(value: unknown): QueryBuilder<T> {
     return this.addCondition("lessThan", value);
   }
 
-  lt(value: any): QueryBuilder<T> {
+  lt(value: unknown): QueryBuilder<T> {
     return this.addCondition("lt", value);
   }
 
-  lessThanOrEqual(value: any): QueryBuilder<T> {
+  lessThanOrEqual(value: unknown): QueryBuilder<T> {
     return this.addCondition("lessThanOrEqual", value);
   }
 
-  lte(value: any): QueryBuilder<T> {
+  lte(value: unknown): QueryBuilder<T> {
     return this.addCondition("lte", value);
   }
 
-  in(values: any[]): QueryBuilder<T> {
+  in(values: unknown[]): QueryBuilder<T> {
     return this.addCondition("in", values);
   }
 
-  notIn(values: any[]): QueryBuilder<T> {
+  notIn(values: unknown[]): QueryBuilder<T> {
     return this.addCondition("notIn", values);
   }
 
@@ -110,7 +110,7 @@ class WhereClauseImpl<T> implements WhereClause<T> {
     return this.addCondition("notExists", true);
   }
 
-  between(min: any, max: any): QueryBuilder<T> {
+  between(min: unknown, max: unknown): QueryBuilder<T> {
     return this.queryBuilder
       .where(this.field).gte(min)
       .where(this.field).lte(max);
@@ -120,7 +120,8 @@ class WhereClauseImpl<T> implements WhereClause<T> {
 /**
  * Main QueryBuilder implementation
  */
-export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
+export class KVMQueryBuilder<T = Record<string, unknown>>
+  implements QueryBuilder<T> {
   private config: QueryConfig = {
     where: [],
     sort: [],
@@ -214,7 +215,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
    */
   select(fields: (keyof T)[]): QueryBuilder<T>;
   select(...fields: (keyof T)[]): QueryBuilder<T>;
-  select(...args: any[]): QueryBuilder<T> {
+  select(...args: unknown[]): QueryBuilder<T> {
     const fields = Array.isArray(args[0]) ? args[0] : args;
     this.config.select = fields.map((f) => f as string);
     return this;
@@ -319,7 +320,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
           return this.config.where.every((condition) => {
             try {
               return this.evaluateCondition(entry.value, condition);
-            } catch (error) {
+            } catch (_error) {
               throw new KVMQueryError(
                 `Failed to evaluate condition on field '${condition.field}' with operator '${condition.operator}'`,
                 { condition, value: entry.value },
@@ -334,8 +335,10 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
         try {
           results.sort((a, b) => {
             for (const sortConfig of this.config.sort) {
-              const aValue = (a.value as any)[sortConfig.field];
-              const bValue = (b.value as any)[sortConfig.field];
+              const aValue =
+                (a.value as Record<string, unknown>)[sortConfig.field];
+              const bValue =
+                (b.value as Record<string, unknown>)[sortConfig.field];
 
               let comparison = 0;
               if (aValue < bValue) comparison = -1;
@@ -349,7 +352,7 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
             }
             return 0;
           });
-        } catch (error) {
+        } catch (_error) {
           throw new KVMQueryError(
             `Failed to sort results`,
             { sortConfig: this.config.sort },
@@ -389,8 +392,11 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   /**
    * Evaluate a single condition against a value
    */
-  private evaluateCondition(value: any, condition: WhereCondition): boolean {
-    const fieldValue = (value as any)[condition.field];
+  private evaluateCondition(
+    value: unknown,
+    condition: WhereCondition,
+  ): boolean {
+    const fieldValue = (value as Record<string, unknown>)[condition.field];
 
     switch (condition.operator) {
       case "equals":

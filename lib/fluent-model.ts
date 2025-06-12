@@ -3,7 +3,12 @@
  * Provides an intuitive, chainable interface for defining models
  */
 
-import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
+import {
+  z,
+  type ZodObject as _ZodObject,
+  type ZodRawShape,
+  type ZodTypeAny,
+} from "zod";
 import { ulid } from "@std/ulid";
 import type { Key, KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
@@ -18,7 +23,7 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
   private fieldName: string;
   private isPrimaryKey = false;
   private isSecondaryIndex = false;
-  private defaultValue?: any;
+  private defaultValue?: unknown;
   private isReadOnly = false;
 
   constructor(fieldName: string, zodType: T) {
@@ -63,7 +68,7 @@ export class FieldBuilder<T extends ZodTypeAny = ZodTypeAny> {
   /**
    * Set a default value for this field
    */
-  default(value: any): this {
+  default(value: unknown): this {
     this.defaultValue = value;
     this.zodType = this.zodType.default(value) as unknown as T;
     return this;
@@ -231,7 +236,7 @@ export class FluentFieldChain {
     return this;
   }
 
-  default(value: any): this {
+  default(value: unknown): this {
     this.fieldBuilder.default(value);
     return this;
   }
@@ -603,7 +608,10 @@ export class FluentKVM {
   /**
    * Create a model with traditional entity definition (backward compatibility)
    */
-  model<T = any>(name: string, entity: KVMEntity): ModelConstructor<T> {
+  model<T = Record<string, unknown>>(
+    name: string,
+    entity: KVMEntity,
+  ): ModelConstructor<T> {
     return createModelClass<T>(name, entity, this.kv);
   }
 

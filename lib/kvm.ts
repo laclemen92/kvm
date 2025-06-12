@@ -76,7 +76,9 @@ export class KVM {
   /**
    * Get an existing model by name
    */
-  getModel<T = any>(name: string): ModelConstructor<T> | undefined {
+  getModel<T = Record<string, unknown>>(
+    name: string,
+  ): ModelConstructor<T> | undefined {
     return this.models.get(name) as ModelConstructor<T>;
   }
 
@@ -178,8 +180,8 @@ export class KVM {
    * Get migration statistics
    */
   async getMigrationStats(): Promise<{
-    storage: any;
-    utils: any;
+    storage: Record<string, unknown>;
+    utils: Record<string, unknown>;
   }> {
     return await this.migrationManager.getStats();
   }
@@ -198,7 +200,7 @@ export class KVM {
   /**
    * Get or create a queue
    */
-  queue<TData = any>(queueName: string): Queue<TData> {
+  queue<TData = Record<string, unknown>>(queueName: string): Queue<TData> {
     return this.queueManager.queue<TData>(queueName);
   }
 
