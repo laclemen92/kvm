@@ -244,14 +244,14 @@ async function _eagerLoadRelation<T>(
   entity: KVMEntity,
   kv: Deno.Kv,
   record: Deno.KvEntry<T>,
-  relation: import("./types.ts").Relation,
+  relation: any,
   includePath: IncludePath,
 ): Promise<void> {
-  const value = record.value as Record<string, unknown>;
+  const value = record.value as any;
   if (!value) return;
 
   // Get the foreign key value(s) from the record
-  let foreignKeyValues: unknown[];
+  let foreignKeyValues: any[];
 
   // For MANY_TO_MANY, we need the primary key value
   if (relation.type === RelationType.MANY_TO_MANY) {
@@ -303,9 +303,9 @@ async function _eagerLoadRelation<T>(
  */
 async function _eagerLoadBelongsTo(
   kv: Deno.Kv,
-  value: Record<string, unknown>,
-  relation: import("./types.ts").Relation,
-  foreignKeyValue: unknown,
+  value: any,
+  relation: any,
+  foreignKeyValue: any,
   includePath: IncludePath,
 ): Promise<void> {
   try {
@@ -337,7 +337,7 @@ async function _eagerLoadBelongsTo(
         }
       }
     }
-  } catch (_error) {
+  } catch (error) {
     // Ignore not found errors
   }
 }
@@ -347,9 +347,9 @@ async function _eagerLoadBelongsTo(
  */
 async function _eagerLoadOneToMany(
   kv: Deno.Kv,
-  value: Record<string, unknown>,
-  relation: import("./types.ts").Relation,
-  _foreignKeyValues: unknown[],
+  value: any,
+  relation: any,
+  foreignKeyValues: any[],
   includePath: IncludePath,
 ): Promise<void> {
   try {
@@ -369,8 +369,7 @@ async function _eagerLoadOneToMany(
     const localKeyValue = value[relation.fields[0]] || value.id;
 
     const filteredResults = results.filter((result) => {
-      return (result.value as Record<string, unknown>)
-        ?.[relation.foreignKey] === localKeyValue;
+      return (result.value as any)?.[relation.foreignKey] === localKeyValue;
     });
 
     value[relation.entityName] = filteredResults.map((r) => r.value);
@@ -388,7 +387,7 @@ async function _eagerLoadOneToMany(
         includePath.include,
       );
     }
-  } catch (_error) {
+  } catch (error) {
     value[relation.entityName] = [];
   }
 }
@@ -398,9 +397,9 @@ async function _eagerLoadOneToMany(
  */
 async function _eagerLoadManyToMany(
   kv: Deno.Kv,
-  value: Record<string, unknown>,
-  relation: import("./types.ts").Relation,
-  _foreignKeyValues: unknown[],
+  value: any,
+  relation: any,
+  foreignKeyValues: any[],
   includePath: IncludePath,
 ): Promise<void> {
   if (!relation.through) {
@@ -425,9 +424,9 @@ async function _eagerLoadManyToMany(
     const primaryKeyValue = value.id;
 
     // Find related IDs through the join table
-    const relatedIds: unknown[] = [];
+    const relatedIds: any[] = [];
     for (const joinRecord of joinResults) {
-      const joinValue = joinRecord.value as Record<string, unknown>;
+      const joinValue = joinRecord.value as any;
       if (
         joinValue &&
         relation.fields.some((field: string) =>
@@ -459,7 +458,7 @@ async function _eagerLoadManyToMany(
         if (result?.value) {
           relatedRecords.push(result);
         }
-      } catch (_error) {
+      } catch (error) {
         // Ignore individual lookup failures
       }
     }
@@ -484,7 +483,7 @@ async function _eagerLoadManyToMany(
         );
       }
     }
-  } catch (_error) {
+  } catch (error) {
     value[relation.entityName] = [];
   }
 }

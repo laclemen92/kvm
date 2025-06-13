@@ -3,12 +3,7 @@
  * Provides an intuitive, chainable interface for defining models
  */
 
-import {
-  z,
-  type ZodObject as _ZodObject,
-  type ZodRawShape,
-  type ZodTypeAny,
-} from "zod";
+import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
 import { ulid } from "@std/ulid";
 import type { Key, KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
@@ -31,8 +26,8 @@ export class SimpleField {
     ulid?: boolean;
     primaryKey?: boolean;
     index?: boolean;
-  }): { zodType: unknown; isPrimaryKey: boolean; isIndex: boolean } {
-    let zodType: unknown = z.string();
+  }) {
+    let zodType: any = z.string();
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -69,8 +64,8 @@ export class SimpleField {
     default?: number | (() => number);
     primaryKey?: boolean;
     index?: boolean;
-  }): { zodType: unknown; isPrimaryKey: boolean; isIndex: boolean } {
-    let zodType: unknown = z.number();
+  }) {
+    let zodType: any = z.number();
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -99,8 +94,8 @@ export class SimpleField {
     default?: boolean | (() => boolean);
     primaryKey?: boolean;
     index?: boolean;
-  }): { zodType: unknown; isPrimaryKey: boolean; isIndex: boolean } {
-    let zodType: unknown = z.boolean();
+  }) {
+    let zodType: any = z.boolean();
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -126,8 +121,8 @@ export class SimpleField {
     autoUpdate?: boolean;
     primaryKey?: boolean;
     index?: boolean;
-  }): { zodType: unknown; isPrimaryKey: boolean; isIndex: boolean } {
-    let zodType: unknown = z.date();
+  }) {
+    let zodType: any = z.date();
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -155,8 +150,8 @@ export class SimpleField {
     default?: T[number] | (() => T[number]);
     primaryKey?: boolean;
     index?: boolean;
-  }): { zodType: unknown; isPrimaryKey: boolean; isIndex: boolean } {
-    let zodType: unknown = z.enum(values);
+  }) {
+    let zodType: any = z.enum(values);
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -183,7 +178,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: unknown = z.array(itemType);
+    let zodType: any = z.array(itemType);
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -211,7 +206,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: unknown = z.object(shape);
+    let zodType: any = z.object(shape);
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -278,13 +273,7 @@ function generateULID(): string {
  * Simple model definition interface
  */
 export interface SimpleModelDefinition {
-  fields: Record<string, {
-    zodType: unknown;
-    isPrimaryKey?: boolean;
-    isIndex?: boolean;
-    isImmutable?: boolean;
-    isAutoUpdate?: boolean;
-  }>;
+  fields: Record<string, any>;
   indexes?: string[];
   relations?: {
     hasMany?: Record<
@@ -313,7 +302,7 @@ export class SimpleFluentKVM {
   /**
    * Define a model with a simple schema definition
    */
-  defineModel<T = unknown>(
+  defineModel<T = any>(
     name: string,
     definition: SimpleModelDefinition,
   ): ModelConstructor<T> {

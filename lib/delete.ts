@@ -71,8 +71,8 @@ export const deleteKey = async <T = unknown>(
         }
       }
 
-      const _result = await atomic.commit();
-      if (!_result.ok) {
+      const result = await atomic.commit();
+      if (!result.ok) {
         throw new Error(`Failed to delete ${entity.name}`);
       }
 
@@ -125,8 +125,8 @@ async function _handleRelationCascadeDelete(
   entityName: string,
 ): Promise<void> {
   switch (relation.type) {
-    case "one-to-many" as RelationType: // Backward compatibility
-    case "hasMany" as RelationType: {
+    case "one-to-many" as any: // Backward compatibility
+    case "hasMany" as any:
       // Delete the relation index
       const relationKey = [
         relation.entityName,
@@ -135,14 +135,13 @@ async function _handleRelationCascadeDelete(
       ];
       atomic.delete(relationKey);
       break;
-    }
 
-    case "belongsTo" as RelationType:
+    case "belongsTo" as any:
       // For belongsTo, we don't need to delete anything since the foreign key is in this entity
       // The related parent entity is not affected
       break;
 
-    case "manyToMany" as RelationType:
+    case "manyToMany" as any:
       // For many-to-many, delete all join table entries
       if (relation.through) {
         try {
@@ -164,7 +163,7 @@ async function _handleRelationCascadeDelete(
 
           // Delete join table entries that reference this entity
           for (const joinRecord of joinTableResults) {
-            const joinValue = joinRecord.value as Record<string, unknown>;
+            const joinValue = joinRecord.value as any;
             if (
               joinValue &&
               relation.fields.some((field: string) =>
@@ -217,7 +216,7 @@ export const cascadeDeleteChildren = async <T = unknown>(
 
     // Filter children that belong to this parent
     const childrenToDelete = childResults.filter((childResult) => {
-      const childValue = childResult.value as Record<string, unknown>;
+      const childValue = childResult.value as any;
       return relation.fields.some((field: string) =>
         childValue?.[field] === parentPrimaryKey
       );

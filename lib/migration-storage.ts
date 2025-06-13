@@ -129,9 +129,9 @@ export class MigrationStorage {
     const migrationKey = [...this.appliedMigrationsPrefix, migration.version];
     atomic.set(migrationKey, migration);
 
-    const _result = await atomic.commit();
+    const result = await atomic.commit();
 
-    if (!_result.ok) {
+    if (!result.ok) {
       throw new MigrationStateError(
         `Failed to apply migration ${migration.version}: version conflict`,
         fromVersion,
@@ -161,9 +161,9 @@ export class MigrationStorage {
     const migrationKey = [...this.appliedMigrationsPrefix, migrationVersion];
     atomic.delete(migrationKey);
 
-    const _result = await atomic.commit();
+    const result = await atomic.commit();
 
-    if (!_result.ok) {
+    if (!result.ok) {
       throw new MigrationStateError(
         `Failed to rollback migration ${migrationVersion}: version conflict`,
         fromVersion,

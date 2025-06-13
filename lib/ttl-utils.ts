@@ -8,7 +8,7 @@
 /**
  * TTL time unit constants in milliseconds
  */
-export const TTL: Record<string, number> = {
+export const TTL = {
   /**
    * Time units for easy TTL calculations
    */
@@ -142,7 +142,7 @@ export const TTL: Record<string, number> = {
 /**
  * TTL configuration for common use cases
  */
-export const TTLConfig: Record<string, Record<string, number>> = {
+export const TTLConfig = {
   /**
    * User session management
    */
@@ -203,7 +203,7 @@ export const TTLConfig: Record<string, Record<string, number>> = {
  */
 export function withTTL(
   ttl: number | string,
-  baseOptions: Record<string, unknown> = {},
+  baseOptions: Record<string, any> = {},
 ): { expireIn: number } & typeof baseOptions {
   const expireIn = typeof ttl === "string" ? TTL.parse(ttl) : ttl;
 
@@ -222,8 +222,8 @@ export function withTTL(
  */
 export function sessionTTL(
   type: keyof typeof TTLConfig.SESSION = "STANDARD",
-  baseOptions: Record<string, unknown> = {},
-): Record<string, unknown> {
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.SESSION[type], baseOptions);
 }
 
@@ -232,8 +232,8 @@ export function sessionTTL(
  */
 export function cacheTTL(
   type: keyof typeof TTLConfig.CACHE = "STANDARD",
-  baseOptions: Record<string, unknown> = {},
-): Record<string, unknown> {
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.CACHE[type], baseOptions);
 }
 
@@ -242,8 +242,8 @@ export function cacheTTL(
  */
 export function tokenTTL(
   type: keyof typeof TTLConfig.TOKEN,
-  baseOptions: Record<string, unknown> = {},
-): Record<string, unknown> {
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.TOKEN[type], baseOptions);
 }
 
@@ -252,7 +252,7 @@ export function tokenTTL(
  */
 export function temporaryTTL(
   type: keyof typeof TTLConfig.TEMPORARY = "FORM_DATA",
-  baseOptions: Record<string, unknown> = {},
-): Record<string, unknown> {
+  baseOptions: Record<string, any> = {},
+) {
   return withTTL(TTLConfig.TEMPORARY[type], baseOptions);
 }

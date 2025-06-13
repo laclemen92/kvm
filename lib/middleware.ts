@@ -32,8 +32,7 @@ const DEFAULT_HOOK_OPTIONS: Required<HookOptions> = {
 /**
  * Implementation of the hook manager
  */
-export class KVMHookManager<T = Record<string, unknown>>
-  implements HookManager<T> {
+export class KVMHookManager<T = any> implements HookManager<T> {
   private hooks: RegisteredHook<T>[] = [];
   private enabled = true;
   private hookIdCounter = 0;
@@ -205,7 +204,7 @@ export class KVMHookManager<T = Record<string, unknown>>
   /**
    * Execute a single pre-hook
    */
-  private executePreHook(
+  private async executePreHook(
     hook: RegisteredHook<T>,
     context: HookContext<T>,
     document?: ModelDocument<T> & T,
@@ -258,7 +257,7 @@ export class KVMHookManager<T = Record<string, unknown>>
   async executePostHooks(
     type: HookType,
     context: HookContext<T>,
-    result: unknown,
+    result: any,
     document?: ModelDocument<T> & T,
   ): Promise<HookExecutionResult> {
     if (!this.enabled) {
@@ -337,10 +336,10 @@ export class KVMHookManager<T = Record<string, unknown>>
   /**
    * Execute a single post-hook
    */
-  private executePostHook(
+  private async executePostHook(
     hook: RegisteredHook<T>,
     context: HookContext<T>,
-    result: unknown,
+    result: any,
     document?: ModelDocument<T> & T,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -428,7 +427,7 @@ export class KVMHookManager<T = Record<string, unknown>>
   /**
    * Install a plugin
    */
-  use(plugin: Plugin<T>, options?: Record<string, unknown>): void {
+  use(plugin: Plugin<T>, options?: Record<string, any>): void {
     plugin.install(this, options);
   }
 
@@ -449,7 +448,7 @@ export class KVMHookManager<T = Record<string, unknown>>
 /**
  * Timestamps plugin - automatically adds createdAt and updatedAt fields
  */
-export function timestampsPlugin<T = Record<string, unknown>>(options: {
+export function timestampsPlugin<T = any>(options: {
   createdAt?: string;
   updatedAt?: string;
 } = {}): Plugin<T> {
@@ -465,7 +464,7 @@ export function timestampsPlugin<T = Record<string, unknown>>(options: {
           context.input &&
           !context.input[createdAt as keyof typeof context.input]
         ) {
-          (context.input as Record<string, unknown>)[createdAt] = new Date();
+          (context.input as any)[createdAt] = new Date();
         }
         next();
       });
@@ -475,7 +474,7 @@ export function timestampsPlugin<T = Record<string, unknown>>(options: {
         if (context.input || this) {
           const target = context.input || this;
           if (target) {
-            (target as Record<string, unknown>)[updatedAt] = new Date();
+            (target as any)[updatedAt] = new Date();
           }
         }
         next();
@@ -484,7 +483,7 @@ export function timestampsPlugin<T = Record<string, unknown>>(options: {
       // Add updatedAt on update
       hooks.pre("update", function (context, next) {
         if (context.input) {
-          (context.input as Record<string, unknown>)[updatedAt] = new Date();
+          (context.input as any)[updatedAt] = new Date();
         }
         next();
       });
@@ -495,10 +494,10 @@ export function timestampsPlugin<T = Record<string, unknown>>(options: {
 /**
  * Validation plugin - adds custom validation rules
  */
-export function validationPlugin<T = Record<string, unknown>>(options: {
+export function validationPlugin<T = any>(options: {
   rules?: Record<
     string,
-    (value: unknown, document: T) => boolean | Promise<boolean>
+    (value: any, document: any) => boolean | Promise<boolean>
   >;
   stopOnFirstError?: boolean;
 } = {}): Plugin<T> {
@@ -518,7 +517,7 @@ export function validationPlugin<T = Record<string, unknown>>(options: {
 
         for (const [field, validator] of Object.entries(rules)) {
           try {
-            const value = (document as Record<string, unknown>)[field];
+            const value = (document as any)[field];
             const isValid = await validator(value, document);
 
             if (!isValid) {
@@ -552,7 +551,7 @@ export function validationPlugin<T = Record<string, unknown>>(options: {
 /**
  * Audit plugin - tracks who created/updated records
  */
-export function auditPlugin<T = Record<string, unknown>>(options: {
+export function auditPlugin<T = any>(options: {
   getCurrentUser?: () => string | Promise<string>;
   createdBy?: string;
   updatedBy?: string;
@@ -572,7 +571,7 @@ export function auditPlugin<T = Record<string, unknown>>(options: {
         if (context.input) {
           try {
             const userId = await getCurrentUser();
-            (context.input as Record<string, unknown>)[createdBy] = userId;
+            (context.input as any)[createdBy] = userId;
           } catch (error) {
             return next(error as Error);
           }
@@ -585,7 +584,7 @@ export function auditPlugin<T = Record<string, unknown>>(options: {
         if (context.input) {
           try {
             const userId = await getCurrentUser();
-            (context.input as Record<string, unknown>)[updatedBy] = userId;
+            (context.input as any)[updatedBy] = userId;
           } catch (error) {
             return next(error as Error);
           }

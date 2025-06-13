@@ -116,7 +116,7 @@ export class ModelAtomicUtils {
    * Create a counter for a specific field in an entity
    */
   createFieldCounter(
-    recordKey: string | Record<string, unknown>,
+    recordKey: string | Record<string, any>,
     field: string,
   ): AtomicCounter {
     const pk = typeof recordKey === "string"
@@ -131,7 +131,7 @@ export class ModelAtomicUtils {
    * Increment a numeric field atomically (e.g., likes, views, comments)
    */
   async incrementField(
-    recordKey: string | Record<string, unknown>,
+    recordKey: string | Record<string, any>,
     field: string,
     amount: number | bigint = 1,
   ): Promise<AtomicTransactionResult> {
@@ -143,7 +143,7 @@ export class ModelAtomicUtils {
    * Batch increment multiple fields atomically
    */
   async incrementFields(
-    recordKey: string | Record<string, unknown>,
+    recordKey: string | Record<string, any>,
     fields: Record<string, number | bigint>,
   ): Promise<AtomicTransactionResult> {
     const pk = typeof recordKey === "string"
@@ -165,7 +165,7 @@ export class ModelAtomicUtils {
    * Get all counter values for a record
    */
   async getCounters(
-    recordKey: string | Record<string, unknown>,
+    recordKey: string | Record<string, any>,
   ): Promise<Record<string, bigint>> {
     const pk = typeof recordKey === "string"
       ? buildPrimaryKey(this.entity.primaryKey, { id: recordKey })
@@ -186,11 +186,7 @@ export class ModelAtomicUtils {
 /**
  * Core atomic utilities factory - provides essential building blocks
  */
-export const AtomicUtils: {
-  counter(kv: Deno.Kv, key: Deno.KvKey): AtomicCounter;
-  forModel(kv: Deno.Kv, entity: KVMEntity): ModelAtomicUtils;
-  builder(kv: Deno.Kv): ReturnType<typeof createAtomicBuilder>;
-} = {
+export const AtomicUtils = {
   /**
    * Create a counter for any key
    */

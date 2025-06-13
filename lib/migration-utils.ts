@@ -16,7 +16,7 @@ export class KVMMigrationUtils implements MigrationUtils {
   async addField(
     entityName: string,
     fieldName: string,
-    defaultValue: unknown,
+    defaultValue: any,
   ): Promise<void> {
     await this.batchProcess(
       entityName,
@@ -36,8 +36,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           }
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(`Failed to add field ${fieldName} to ${entityName}`);
         }
       },
@@ -58,13 +58,13 @@ export class KVMMigrationUtils implements MigrationUtils {
             record.value && typeof record.value === "object" &&
             fieldName in record.value
           ) {
-            const { [fieldName]: _removed, ...rest } = record.value;
+            const { [fieldName]: removed, ...rest } = record.value;
             atomic.set(record.key, rest);
           }
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(
             `Failed to remove field ${fieldName} from ${entityName}`,
           );
@@ -99,8 +99,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           }
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(
             `Failed to rename field ${oldName} to ${newName} in ${entityName}`,
           );
@@ -115,7 +115,7 @@ export class KVMMigrationUtils implements MigrationUtils {
   async transformField(
     entityName: string,
     fieldName: string,
-    transformer: (value: unknown, record: unknown) => unknown,
+    transformer: (value: any, record: any) => any,
   ): Promise<void> {
     await this.batchProcess(
       entityName,
@@ -138,8 +138,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           }
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(
             `Failed to transform field ${fieldName} in ${entityName}`,
           );
@@ -152,7 +152,7 @@ export class KVMMigrationUtils implements MigrationUtils {
    * Copy data from one entity to another
    */
   async copyEntity(sourceEntity: string, targetEntity: string): Promise<void> {
-    const sourceRecords: Array<{ key: Deno.KvKey; value: unknown }> = [];
+    const sourceRecords: Array<{ key: Deno.KvKey; value: any }> = [];
 
     // Collect all source records
     for await (const entry of this.kv.list({ prefix: [sourceEntity] })) {
@@ -171,8 +171,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           atomic.set(newKey, record.value);
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(
             `Failed to copy from ${sourceEntity} to ${targetEntity}`,
           );
@@ -205,8 +205,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           atomic.delete(record.key);
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(`Failed to truncate entity ${entityName}`);
         }
       },
@@ -242,11 +242,11 @@ export class KVMMigrationUtils implements MigrationUtils {
   async batchProcess(
     entityName: string,
     processor: (
-      records: Array<{ key: Deno.KvKey; value: unknown }>,
+      records: Array<{ key: Deno.KvKey; value: any }>,
     ) => Promise<void>,
     batchSize: number = 100,
   ): Promise<void> {
-    let batch: Array<{ key: Deno.KvKey; value: unknown }> = [];
+    let batch: Array<{ key: Deno.KvKey; value: any }> = [];
 
     for await (const entry of this.kv.list({ prefix: [entityName] })) {
       batch.push({ key: entry.key, value: entry.value });
@@ -315,12 +315,7 @@ export class KVMMigrationUtils implements MigrationUtils {
       recordCount: number;
     }>
   > {
-    const backups: Array<{
-      backupName: string;
-      originalEntity: string;
-      createdAt: Date;
-      recordCount: number;
-    }> = [];
+    const backups: Array<any> = [];
 
     for await (const entry of this.kv.list({ prefix: ["__backup_meta"] })) {
       if (entry.value) {
@@ -374,8 +369,8 @@ export class KVMMigrationUtils implements MigrationUtils {
           }
         }
 
-        const _result = await atomic.commit();
-        if (!_result.ok) {
+        const result = await atomic.commit();
+        if (!result.ok) {
           throw new Error(
             `Failed to create index ${finalIndexName} on ${entityName}.${fieldName}`,
           );

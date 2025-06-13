@@ -88,7 +88,7 @@ export const create = async <T = unknown>(
 
       switch (relation.type) {
         case RelationType.ONE_TO_MANY:
-        case "one-to-many" as RelationType: { // Backward compatibility
+        case "one-to-many" as any: // Backward compatibility
           // Only create relation keys if this entity has the foreign key field
           // This handles child entities that reference a parent (e.g., Product -> Category)
           const hasForeignKeyFields = relation.fields.every((field) =>
@@ -118,7 +118,6 @@ export const create = async <T = unknown>(
             }
           }
           break;
-        }
 
         case RelationType.BELONGS_TO:
           // For belongsTo, we don't need to create additional keys during creation
@@ -183,7 +182,7 @@ export const createManyToManyRelation = async (
   entity1Field: string,
   entity2Id: string,
   entity2Field: string,
-  additionalData?: Record<string, unknown>,
+  additionalData?: Record<string, any>,
 ): Promise<boolean> => {
   try {
     const joinTableKey = [joinTableName, entity1Id, entity2Id];

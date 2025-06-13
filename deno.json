@@ -23,23 +23,6 @@
     "coverage/"
   ],
   "compilerOptions": {
-    "noUncheckedIndexedAccess": false,
-    "strict": true
-  },
-  "lint": {
-    "rules": {
-      "tags": ["recommended"],
-      "include": ["no-explicit-any", "require-await", "no-unused-vars"],
-      "exclude": []
-    },
-    "exclude": ["**/*.test.ts", "examples/**/*.ts"]
-  },
-  "fmt": {
-    "indentWidth": 2,
-    "lineWidth": 80,
-    "proseWrap": "preserve",
-    "semiColons": true,
-    "singleQuote": false,
-    "useTabs": false
+    "noUncheckedIndexedAccess": false
   }
 }

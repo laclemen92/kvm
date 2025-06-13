@@ -167,7 +167,7 @@ async function _handleRelationUpdates(
   for (const relation of entity.relations) {
     switch (relation.type) {
       case RelationType.ONE_TO_MANY:
-      case "one-to-many" as RelationType: // Backward compatibility
+      case "one-to-many" as any: // Backward compatibility
         await _handleOneToManyUpdate(
           operation,
           relation,
@@ -209,13 +209,13 @@ async function _handleRelationUpdates(
 /**
  * Handle one-to-many relation updates
  */
-function _handleOneToManyUpdate(
+async function _handleOneToManyUpdate(
   operation: Deno.AtomicOperation,
   relation: Relation,
   oldValue: StringKeyedValueObject,
   newValue: StringKeyedValueObject,
   pk: Deno.KvKey,
-): void {
+): Promise<void> {
   // Check if any of the relation fields have changed
   const fieldsChanged = relation.fields.some((field) =>
     oldValue[field] !== newValue[field]
@@ -248,14 +248,14 @@ function _handleOneToManyUpdate(
 /**
  * Handle belongsTo relation updates
  */
-function _handleBelongsToUpdate(
-  _kv: Deno.Kv,
-  _operation: Deno.AtomicOperation,
+async function _handleBelongsToUpdate(
+  kv: Deno.Kv,
+  operation: Deno.AtomicOperation,
   relation: Relation,
   oldValue: StringKeyedValueObject,
   newValue: StringKeyedValueObject,
-  _pk: Deno.KvKey,
-): void {
+  pk: Deno.KvKey,
+): Promise<void> {
   // Check if the foreign key has changed
   const foreignKeyField = relation.foreignKey || relation.fields[0];
   const oldForeignKey = oldValue[foreignKeyField];
@@ -277,13 +277,13 @@ function _handleBelongsToUpdate(
 /**
  * Handle many-to-many relation updates
  */
-function _handleManyToManyUpdate(
-  _kv: Deno.Kv,
-  _operation: Deno.AtomicOperation,
+async function _handleManyToManyUpdate(
+  kv: Deno.Kv,
+  operation: Deno.AtomicOperation,
   relation: Relation,
   oldValue: StringKeyedValueObject,
   newValue: StringKeyedValueObject,
-): void {
+): Promise<void> {
   // For many-to-many relations, we typically don't update join table entries
   // during entity updates unless specific fields that are part of the relation change
 

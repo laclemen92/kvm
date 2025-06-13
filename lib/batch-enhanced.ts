@@ -17,6 +17,7 @@ import { create } from "./create.ts";
 import { update } from "./update.ts";
 import { deleteKey } from "./delete.ts";
 import { findUnique } from "./find.ts";
+import { buildPrimaryKey } from "./utils.ts";
 import { KVMErrorUtils } from "./errors.ts";
 
 /**
@@ -42,7 +43,7 @@ export async function enhancedCreateMany<T>(
   kv: Deno.Kv,
   data: T[],
   options: BatchCreateOptions = {},
-  _modelName?: string,
+  modelName?: string,
 ): Promise<BatchCreateResult<T>> {
   const {
     maxRetries = 0,
@@ -66,7 +67,7 @@ export async function enhancedCreateMany<T>(
     },
   };
 
-  const createdItems: Array<{ data: T; key: unknown }> = [];
+  const createdItems: Array<{ data: T; key: any }> = [];
 
   // Process each item with retry logic
   for (let i = 0; i < data.length; i++) {
@@ -103,9 +104,7 @@ export async function enhancedCreateMany<T>(
             // Extract the primary key value from the created item for rollback
             const primaryKeyDef = entity.primaryKey.find((pk) => pk.key);
             const primaryKeyValue = primaryKeyDef
-              ? (createResult.value as Record<string, unknown>)[
-                primaryKeyDef.key!
-              ]
+              ? (createResult.value as any)[primaryKeyDef.key!]
               : createResult.value;
             createdItems.push({
               data: createResult.value,
@@ -181,7 +180,7 @@ export async function enhancedUpdateMany<T>(
   kv: Deno.Kv,
   updates: BatchUpdateInput<T>[],
   options: BatchUpdateOptions = {},
-  _modelName?: string,
+  modelName?: string,
 ): Promise<BatchUpdateResult<T>> {
   const {
     maxRetries = 0,
@@ -207,7 +206,7 @@ export async function enhancedUpdateMany<T>(
     },
   };
 
-  const originalValues: Array<{ key: unknown; originalData: T }> = [];
+  const originalValues: Array<{ key: any; originalData: T }> = [];
 
   // Process each update with retry logic
   for (let i = 0; i < updates.length; i++) {
@@ -217,18 +216,18 @@ export async function enhancedUpdateMany<T>(
     let retryCount = 0;
 
     // Store original value for potential rollback
-    let _originalValue: T | null = null;
+    let originalValue: T | null = null;
     if (rollbackOnAnyFailure && !atomic) {
       try {
         const existing = await findUnique<T>(entity, kv, updateItem.key);
         if (existing?.value) {
-          _originalValue = existing.value;
+          originalValue = existing.value;
           originalValues.push({
             key: updateItem.key,
             originalData: existing.value,
           });
         }
-      } catch (_error) {
+      } catch (error) {
         // If we can't find the original, we can't rollback
       }
     }
@@ -352,7 +351,7 @@ export async function enhancedDeleteMany<T>(
   kv: Deno.Kv,
   keys: BatchDeleteInput[],
   options: BatchDeleteOptions = {},
-  _modelName?: string,
+  modelName?: string,
 ): Promise<BatchDeleteResult<T>> {
   const {
     maxRetries = 0,
@@ -380,7 +379,7 @@ export async function enhancedDeleteMany<T>(
     },
   };
 
-  const deletedItems: Array<{ key: unknown; originalData: T }> = [];
+  const deletedItems: Array<{ key: any; originalData: T }> = [];
 
   // Process each deletion with retry logic
   for (let i = 0; i < keys.length; i++) {
@@ -400,7 +399,7 @@ export async function enhancedDeleteMany<T>(
         if (existing?.value) {
           originalValue = existing.value;
         }
-      } catch (_error) {
+      } catch (error) {
         // Continue even if we can't find the original
       }
     }

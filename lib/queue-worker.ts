@@ -9,7 +9,7 @@ import type {
 import { JobProcessingError } from "./queue-types.ts";
 import type { KVMQueue } from "./queue.ts";
 
-export class QueueWorkerImpl<TData = unknown, TResult = unknown>
+export class QueueWorkerImpl<TData = any, TResult = any>
   implements QueueWorker<TData, TResult> {
   private _isRunning = false;
   private _isPaused = false;
@@ -18,10 +18,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
   private _failedCount = 0;
   private _pollingTimer: number | null = null;
   private _jobTimeouts = new Map<string, number>();
-  private _eventListeners = new Map<
-    string,
-    Array<(...args: unknown[]) => void>
-  >();
+  private _eventListeners = new Map<string, Array<(...args: any[]) => void>>();
 
   constructor(
     private readonly queue: KVMQueue<TData>,
@@ -40,7 +37,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
     };
   }
 
-  start(): void {
+  async start(): Promise<void> {
     if (this._isRunning) return;
 
     this._isRunning = true;
@@ -80,7 +77,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
     this.emit("worker:stopped", this.queue.name);
   }
 
-  pause(): void {
+  async pause(): Promise<void> {
     this._isPaused = true;
     this.emit("worker:paused", this.queue.name);
   }
@@ -106,7 +103,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
     return this._isPaused;
   }
 
-  getStats(): { processed: number; failed: number; active: number } {
+  getStats() {
     return {
       processed: this._processedCount,
       failed: this._failedCount,
@@ -114,14 +111,14 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
     };
   }
 
-  on(event: string, listener: (...args: unknown[]) => void): void {
+  on(event: string, listener: (...args: any[]) => void): void {
     if (!this._eventListeners.has(event)) {
       this._eventListeners.set(event, []);
     }
     this._eventListeners.get(event)!.push(listener);
   }
 
-  off(event: string, listener: (...args: unknown[]) => void): void {
+  off(event: string, listener: (...args: any[]) => void): void {
     const listeners = this._eventListeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -131,7 +128,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
     }
   }
 
-  private emit(event: string, ...args: unknown[]): void {
+  private emit(event: string, ...args: any[]): void {
     const listeners = this._eventListeners.get(event);
     if (listeners) {
       for (const listener of listeners) {
@@ -177,7 +174,7 @@ export class QueueWorkerImpl<TData = unknown, TResult = unknown>
 
       if (this.options.onError) {
         try {
-          await this.options.onError(error as Error, {} as QueueJob<TData>);
+          await this.options.onError(error as Error, null as any);
         } catch (handlerError) {
           console.error("Error in worker error handler:", handlerError);
         }

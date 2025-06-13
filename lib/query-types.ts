@@ -1,4 +1,5 @@
-import type { ModelDocument } from "./model-types.ts";
+import type { FindManyOptions } from "./types.ts";
+import type { ModelConstructor, ModelDocument } from "./model-types.ts";
 
 /**
  * Comparison operators for where clauses
@@ -35,7 +36,7 @@ export type SortDirection = "asc" | "desc";
 export interface WhereCondition {
   field: string;
   operator: ComparisonOperator;
-  value: unknown;
+  value: any;
 }
 
 /**
@@ -62,7 +63,7 @@ export interface QueryConfig {
 /**
  * Query builder interface for chaining
  */
-export interface QueryBuilder<T = Record<string, unknown>> {
+export interface QueryBuilder<T = any> {
   // Where methods
   where(field: keyof T): WhereClause<T>;
   where(field: string): WhereClause<T>;
@@ -98,26 +99,26 @@ export interface QueryBuilder<T = Record<string, unknown>> {
  * Where clause builder for individual fields
  */
 export interface WhereClause<T> {
-  equals(value: unknown): QueryBuilder<T>;
-  eq(value: unknown): QueryBuilder<T>;
+  equals(value: any): QueryBuilder<T>;
+  eq(value: any): QueryBuilder<T>;
 
-  notEquals(value: unknown): QueryBuilder<T>;
-  ne(value: unknown): QueryBuilder<T>;
+  notEquals(value: any): QueryBuilder<T>;
+  ne(value: any): QueryBuilder<T>;
 
-  greaterThan(value: unknown): QueryBuilder<T>;
-  gt(value: unknown): QueryBuilder<T>;
+  greaterThan(value: any): QueryBuilder<T>;
+  gt(value: any): QueryBuilder<T>;
 
-  greaterThanOrEqual(value: unknown): QueryBuilder<T>;
-  gte(value: unknown): QueryBuilder<T>;
+  greaterThanOrEqual(value: any): QueryBuilder<T>;
+  gte(value: any): QueryBuilder<T>;
 
-  lessThan(value: unknown): QueryBuilder<T>;
-  lt(value: unknown): QueryBuilder<T>;
+  lessThan(value: any): QueryBuilder<T>;
+  lt(value: any): QueryBuilder<T>;
 
-  lessThanOrEqual(value: unknown): QueryBuilder<T>;
-  lte(value: unknown): QueryBuilder<T>;
+  lessThanOrEqual(value: any): QueryBuilder<T>;
+  lte(value: any): QueryBuilder<T>;
 
-  in(values: unknown[]): QueryBuilder<T>;
-  notIn(values: unknown[]): QueryBuilder<T>;
+  in(values: any[]): QueryBuilder<T>;
+  notIn(values: any[]): QueryBuilder<T>;
 
   contains(value: string): QueryBuilder<T>;
   startsWith(value: string): QueryBuilder<T>;
@@ -126,13 +127,13 @@ export interface WhereClause<T> {
   exists(): QueryBuilder<T>;
   notExists(): QueryBuilder<T>;
 
-  between(min: unknown, max: unknown): QueryBuilder<T>;
+  between(min: any, max: any): QueryBuilder<T>;
 }
 
 /**
  * Query executor interface
  */
-export interface QueryExecutor<T = Record<string, unknown>> {
+export interface QueryExecutor<T = any> {
   execute(config: QueryConfig): Promise<(ModelDocument<T> & T)[]>;
   executeOne(config: QueryConfig): Promise<(ModelDocument<T> & T) | null>;
   executeCount(config: QueryConfig): Promise<number>;
