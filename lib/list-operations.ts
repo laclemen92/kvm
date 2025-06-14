@@ -3,7 +3,7 @@
  */
 
 import type { KVMEntity } from "./types.ts";
-import { buildPrimaryKey } from "./utils.ts";
+// buildPrimaryKey import removed as unused
 
 /**
  * Options for advanced list operations

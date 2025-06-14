@@ -2,8 +2,8 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
-import { KVMQueryBuilder } from "./query-builder.ts";
-import { KVMNotFoundError, KVMQueryError } from "./errors.ts";
+import type { KVMQueryBuilder } from "./query-builder.ts";
+import { KVMNotFoundError, type KVMQueryError } from "./errors.ts";
 import { createKVM } from "./kvm.ts";
 import { z } from "zod";
 import type { KVM } from "./kvm.ts";

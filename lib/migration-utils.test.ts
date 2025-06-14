@@ -89,7 +89,7 @@ Deno.test("KVMMigrationUtils.transformField", async () => {
   await kv.set(["users", "3"], { id: "3", name: "bob" });
 
   // Transform field to uppercase
-  await utils.transformField("users", "name", (value) => value.toUpperCase());
+  await utils.transformField("users", "name", (value) => (value as string).toUpperCase());
 
   // Check results
   const user1 = await kv.get(["users", "1"]);

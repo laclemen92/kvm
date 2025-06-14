@@ -8,7 +8,7 @@ import {
 import { expect } from "jsr:@std/expect";
 import { z } from "zod";
 import { createKVM } from "./kvm.ts";
-import { ValueType } from "./types.ts";
+import type { ValueType } from "./types.ts";
 import type { KVM } from "./kvm.ts";
 
 describe("Query Builder Integration", () => {

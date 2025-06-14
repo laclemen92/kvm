@@ -1,18 +1,18 @@
 import {
   assertEquals,
   assertExists,
-  assertNotEquals,
+  type assertNotEquals,
   assertRejects,
-  assertThrows,
+  type assertThrows,
 } from "https://deno.land/std@0.218.0/assert/mod.ts";
 import { z } from "zod";
 import {
   getWatchManager,
   initializeWatchManager,
   WatchManager,
-  watchQuery,
-  watchRecord,
-  watchRecords,
+  type watchQuery,
+  type watchRecord,
+  type watchRecords,
 } from "./watch.ts";
 import { WatchEventType } from "./watch-types.ts";
 import { WatchUtils } from "./watch-utils.ts";

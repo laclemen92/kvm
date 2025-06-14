@@ -12,7 +12,7 @@ import {
   commentEntity,
   manyProductEntity,
   postEntity,
-  productEntity,
+  type productEntity,
 } from "./fixtures.ts";
 import type { KVMEntity } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";

@@ -17,7 +17,7 @@ import type {
 import { WatchEventType } from "./watch-types.ts";
 import { WatchUtils } from "./watch-utils.ts";
 import { findMany } from "./find.ts";
-import { buildPrimaryKey } from "./utils.ts";
+import type { buildPrimaryKey } from "./utils.ts";
 
 /**
  * Core watch functionality for KVM entities

@@ -1,10 +1,10 @@
 import {
   assertEquals,
   assertExists,
-  assertRejects,
+  type assertRejects,
 } from "https://deno.land/std@0.218.0/assert/mod.ts";
 import { z } from "zod";
-import { createKVM } from "./kvm.ts";
+import type { createKVM } from "./kvm.ts";
 import { WatchEventType } from "./watch-types.ts";
 
 // Test schemas

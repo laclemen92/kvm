@@ -24,5 +24,8 @@
   ],
   "compilerOptions": {
     "noUncheckedIndexedAccess": false
+  },
+  "lint": {
+    "exclude": ["**/*.test.ts", "examples/**/*.ts"]
   }
 }

@@ -9,7 +9,7 @@ import type {
 import { JobProcessingError } from "./queue-types.ts";
 import type { KVMQueue } from "./queue.ts";
 
-export class QueueWorkerImpl<TData = any, TResult = any>
+export class QueueWorkerImpl<TData = unknown, TResult = unknown>
   implements QueueWorker<TData, TResult> {
   private _isRunning = false;
   private _isPaused = false;
@@ -18,7 +18,7 @@ export class QueueWorkerImpl<TData = any, TResult = any>
   private _failedCount = 0;
   private _pollingTimer: number | null = null;
   private _jobTimeouts = new Map<string, number>();
-  private _eventListeners = new Map<string, Array<(...args: any[]) => void>>();
+  private _eventListeners = new Map<string, Array<(...args: unknown[]) => void>>();
 
   constructor(
     private readonly queue: KVMQueue<TData>,
@@ -111,14 +111,14 @@ export class QueueWorkerImpl<TData = any, TResult = any>
     };
   }
 
-  on(event: string, listener: (...args: any[]) => void): void {
+  on(event: string, listener: (...args: unknown[]) => void): void {
     if (!this._eventListeners.has(event)) {
       this._eventListeners.set(event, []);
     }
     this._eventListeners.get(event)!.push(listener);
   }
 
-  off(event: string, listener: (...args: any[]) => void): void {
+  off(event: string, listener: (...args: unknown[]) => void): void {
     const listeners = this._eventListeners.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener);
@@ -128,7 +128,7 @@ export class QueueWorkerImpl<TData = any, TResult = any>
     }
   }
 
-  private emit(event: string, ...args: any[]): void {
+  private emit(event: string, ...args: unknown[]): void {
     const listeners = this._eventListeners.get(event);
     if (listeners) {
       for (const listener of listeners) {

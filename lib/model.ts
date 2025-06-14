@@ -4,10 +4,15 @@ import type {
   FindOptions,
   ModelConstructor,
   ModelDocument,
-  ModelStatic,
   UpdateOptions,
 } from "./model-types.ts";
-import type { FindManyOptions, KVMEntity, PopulateOptions } from "./types.ts";
+import type {
+  FindManyOptions,
+  KVMEntity,
+  PopulateOptions,
+  Relation,
+  StringKeyedValueObject,
+} from "./types.ts";
 import { RelationType } from "./types.ts";
 import type { QueryBuilder, WhereClause } from "./query-types.ts";
 import type {
@@ -22,7 +27,6 @@ import type {
 } from "./batch-types.ts";
 import type {
   HookContext,
-  HookManager,
   HookOptions,
   HookType,
   Plugin,
@@ -30,16 +34,9 @@ import type {
   PreHookFunction,
 } from "./middleware-types.ts";
 import { create } from "./create.ts";
-import {
-  eagerLoadRelations,
-  findFirst,
-  findFirstOrThrow,
-  findMany,
-  findUnique,
-  findUniqueOrThrow,
-} from "./find.ts";
-import { update, updateMany } from "./update.ts";
-import { deleteKey, deleteMany } from "./delete.ts";
+import { eagerLoadRelations, findFirst, findMany, findUnique } from "./find.ts";
+import { update } from "./update.ts";
+import { deleteKey } from "./delete.ts";
 import { KVMQueryBuilder } from "./query-builder.ts";
 import {
   createMany as batchCreate,
@@ -61,13 +58,13 @@ import {
 import type { AtomicMutationBuilder } from "./atomic-types.ts";
 import { createAtomicBuilder } from "./atomic-builder.ts";
 import { TTL } from "./ttl-utils.ts";
-import { AtomicUtils, ModelAtomicUtils } from "./atomic-utils.ts";
+import { AtomicUtils, type ModelAtomicUtils } from "./atomic-utils.ts";
 
 /**
  * Base model class that provides instance methods for documents
  */
-export class BaseModel<T = any> implements ModelDocument<T> {
-  [key: string]: any;
+export class BaseModel<T = unknown> implements ModelDocument<T> {
+  [key: string]: unknown;
 
   constructor(data: T) {
     Object.assign(this, data);
@@ -83,20 +80,24 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "save",
-      document: this as any,
-      input: this as any,
+      document: this as unknown as ModelDocument<T> & T | undefined,
+      input: this,
       options,
     };
 
     try {
       // Execute pre-save hooks
-      await ModelClass.hooks.executePreHooks("save", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "save",
+        context,
+        this as unknown as (ModelDocument<T> & T) | undefined,
+      );
 
       const result = await update<T>(
         ModelClass.entity,
         ModelClass.kv,
         primaryKeyValue,
-        this as any,
+        this as unknown as Partial<T>,
         options,
       );
 
@@ -109,13 +110,16 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "save",
         context,
         result,
-        this as any,
+        this as unknown as (ModelDocument<T> & T) | undefined,
       );
 
       return this;
     } catch (error) {
       if ((error as Error).name === "ZodError") {
-        throw KVMErrorUtils.fromZodError(error as any, ModelClass.modelName);
+        throw KVMErrorUtils.fromZodError(
+          error as unknown,
+          ModelClass.modelName,
+        );
       }
       throw KVMErrorUtils.wrap(error as Error, "update", ModelClass.modelName);
     }
@@ -131,13 +135,17 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "delete",
-      document: this as any,
+      document: this as unknown as (ModelDocument<T> & T) | undefined,
       options,
     };
 
     try {
       // Execute pre-delete hooks
-      await ModelClass.hooks.executePreHooks("delete", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "delete",
+        context,
+        this as unknown as (ModelDocument<T> & T) | undefined,
+      );
 
       await deleteKey<T>(
         ModelClass.entity,
@@ -151,7 +159,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "delete",
         context,
         true,
-        this as any,
+        this as unknown as (ModelDocument<T> & T) | undefined,
       );
     } catch (error) {
       throw KVMErrorUtils.wrap(error as Error, "delete", ModelClass.modelName);
@@ -167,14 +175,18 @@ export class BaseModel<T = any> implements ModelDocument<T> {
     const context: HookContext<T> = {
       modelName: ModelClass.modelName,
       operation: "update",
-      document: this as any,
+      document: this as unknown as (ModelDocument<T> & T) | undefined,
       input: data,
       options,
     };
 
     try {
       // Execute pre-update hooks
-      await ModelClass.hooks.executePreHooks("update", context, this as any);
+      await ModelClass.hooks.executePreHooks(
+        "update",
+        context,
+        this as unknown as (ModelDocument<T> & T) | undefined,
+      );
 
       Object.assign(this, data);
 
@@ -185,7 +197,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
         "update",
         context,
         result,
-        this as any,
+        this as unknown as (ModelDocument<T> & T) | undefined,
       );
 
       return result;
@@ -329,9 +341,9 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a belongsTo relation (single record)
    */
   private async _populateBelongsTo(
-    relation: any,
-    foreignKeyValue: any,
-    options: Partial<PopulateOptions>,
+    relation: Relation,
+    foreignKeyValue: unknown,
+    _options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {
     try {
@@ -342,13 +354,13 @@ export class BaseModel<T = any> implements ModelDocument<T> {
           primaryKey: [{ name: relation.entityName, key: "id" }],
         } as KVMEntity,
         ModelClass.kv,
-        foreignKeyValue,
+        foreignKeyValue as Deno.KvKeyPart | Deno.KvKey | StringKeyedValueObject,
       );
 
       if (result?.value) {
         (this as any)[relation.entityName] = result.value;
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore not found errors for optional relations
     }
   }
@@ -357,8 +369,8 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a hasMany/one-to-many relation (array of records)
    */
   private async _populateOneToMany(
-    relation: any,
-    foreignKeyValues: any[],
+    relation: Relation,
+    _foreignKeyValues: unknown[],
     options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {
@@ -385,7 +397,7 @@ export class BaseModel<T = any> implements ModelDocument<T> {
       });
 
       (this as any)[relation.entityName] = filteredResults.map((r) => r.value);
-    } catch (error) {
+    } catch (_error) {
       (this as any)[relation.entityName] = [];
     }
   }
@@ -394,8 +406,8 @@ export class BaseModel<T = any> implements ModelDocument<T> {
    * Populate a many-to-many relation (array of records through join table)
    */
   private async _populateManyToMany(
-    relation: any,
-    foreignKeyValues: any[],
+    relation: Relation,
+    _foreignKeyValues: unknown[],
     options: Partial<PopulateOptions>,
     ModelClass: ModelConstructor<T>,
   ): Promise<void> {

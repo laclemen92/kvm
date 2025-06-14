@@ -1,5 +1,5 @@
 import type { ZodObject, ZodRawShape } from "zod";
-import { z } from "zod";
+import type { z } from "zod";
 import type {
   FindManyOptions,
   IncludePath,
@@ -24,6 +24,7 @@ import type {
   Plugin,
   PostHookFunction,
   PreHookFunction,
+  RegisteredHook,
 } from "./middleware-types.ts";
 import type {
   DateRangeOptions,
@@ -194,7 +195,7 @@ export interface ModelStatic<T = any> {
   removeHook(id: string): boolean;
   removeHooks(type: HookType, timing?: "pre" | "post"): number;
   clearHooks(): void;
-  getHooks(type?: HookType, timing?: "pre" | "post"): any[];
+  getHooks(type?: HookType, timing?: "pre" | "post"): RegisteredHook[];
   setHooksEnabled(enabled: boolean): void;
   areHooksEnabled(): boolean;
 

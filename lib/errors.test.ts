@@ -14,7 +14,7 @@ import {
   KVMConfigurationError,
   KVMConnectionError,
   KVMConstraintError,
-  KVMError,
+  type KVMError,
   KVMErrorUtils,
   KVMNotFoundError,
   KVMOperationError,

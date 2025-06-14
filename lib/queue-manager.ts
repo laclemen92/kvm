@@ -18,14 +18,14 @@ export class KVMQueueManager implements QueueManager {
 
   constructor(private readonly kv: Deno.Kv) {}
 
-  private getQueue<TData = any>(queueName: string): KVMQueue<TData> {
+  private getQueue<TData = unknown>(queueName: string): KVMQueue<TData> {
     if (!this.queues.has(queueName)) {
       this.queues.set(queueName, new KVMQueue<TData>(queueName, this.kv));
     }
     return this.queues.get(queueName) as KVMQueue<TData>;
   }
 
-  queue<TData = any>(queueName: string): Queue<TData> {
+  queue<TData = unknown>(queueName: string): Queue<TData> {
     return this.getQueue<TData>(queueName);
   }
 

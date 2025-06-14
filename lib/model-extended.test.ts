@@ -1,8 +1,8 @@
 import {
   assertEquals,
   assertInstanceOf,
-  assertRejects,
-  assertThrows,
+  type assertRejects,
+  type assertThrows,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
 import { BaseModel, createModelClass } from "./model.ts";
 import type { KVMEntity } from "./types.ts";
@@ -93,9 +93,9 @@ Deno.test("BaseModel", async (t) => {
     const model = new BaseModel(data);
 
     assertEquals(model.id, "1");
-    assertEquals(model.profile.age, 30);
-    assertEquals(model.profile.settings.theme, "dark");
-    assertEquals(model.tags.length, 2);
+    assertEquals((model.profile as any).age, 30);
+    assertEquals((model.profile as any).settings.theme, "dark");
+    assertEquals((model.tags as any[]).length, 2);
   });
 });
 

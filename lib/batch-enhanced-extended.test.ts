@@ -1,6 +1,6 @@
 import {
   assertEquals,
-  assertRejects,
+  type assertRejects,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
 import {
   enhancedCreateMany,
@@ -69,7 +69,7 @@ Deno.test("Enhanced Batch Operations - Comprehensive Coverage", async (t) => {
       onRetry: async (error, attempt, item) => {
         retryCallbackCalled = true;
         assertEquals(attempt, 1);
-        assertEquals(item.id, "1");
+        assertEquals((item as any).id, "1");
       },
     });
 

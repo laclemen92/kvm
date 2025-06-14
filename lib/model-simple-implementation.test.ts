@@ -1,6 +1,6 @@
 import {
   assertEquals,
-  assertInstanceOf,
+  type assertInstanceOf,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
 import { createModelClass } from "./model.ts";
 import type { KVMEntity } from "./types.ts";

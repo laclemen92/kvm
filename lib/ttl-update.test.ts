@@ -2,7 +2,7 @@ import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { z } from "zod";
 import { create } from "./create.ts";
 import { update } from "./update.ts";
-import { findUnique } from "./find.ts";
+import type { findUnique } from "./find.ts";
 import type { KVMEntity } from "./types.ts";
 
 const testEntity: KVMEntity = {

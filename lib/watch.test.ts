@@ -7,7 +7,7 @@ import {
   WatchManager,
   watchQuery,
   watchRecord,
-  watchRecords,
+  type watchRecords,
 } from "./watch.ts";
 import { WatchEventType } from "./watch-types.ts";
 import { WatchUtils } from "./watch-utils.ts";

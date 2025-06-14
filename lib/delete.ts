@@ -125,8 +125,8 @@ async function _handleRelationCascadeDelete(
   entityName: string,
 ): Promise<void> {
   switch (relation.type) {
-    case "one-to-many" as any: // Backward compatibility
-    case "hasMany" as any:
+    case "one-to-many" as RelationType: // Backward compatibility
+    case "hasMany" as RelationType:
       // Delete the relation index
       const relationKey = [
         relation.entityName,
@@ -136,12 +136,12 @@ async function _handleRelationCascadeDelete(
       atomic.delete(relationKey);
       break;
 
-    case "belongsTo" as any:
+    case "belongsTo" as RelationType:
       // For belongsTo, we don't need to delete anything since the foreign key is in this entity
       // The related parent entity is not affected
       break;
 
-    case "manyToMany" as any:
+    case "manyToMany" as RelationType:
       // For many-to-many, delete all join table entries
       if (relation.through) {
         try {
@@ -163,7 +163,7 @@ async function _handleRelationCascadeDelete(
 
           // Delete join table entries that reference this entity
           for (const joinRecord of joinTableResults) {
-            const joinValue = joinRecord.value as any;
+            const joinValue = joinRecord.value as Record<string, unknown>;
             if (
               joinValue &&
               relation.fields.some((field: string) =>
@@ -216,7 +216,7 @@ export const cascadeDeleteChildren = async <T = unknown>(
 
     // Filter children that belong to this parent
     const childrenToDelete = childResults.filter((childResult) => {
-      const childValue = childResult.value as any;
+      const childValue = childResult.value as Record<string, unknown>;
       return relation.fields.some((field: string) =>
         childValue?.[field] === parentPrimaryKey
       );

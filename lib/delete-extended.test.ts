@@ -3,7 +3,7 @@
  * Focuses on testing the untested paths in delete operations
  */
 
-import { assertEquals, assertExists, assertRejects } from "@std/assert";
+import { assertEquals, assertExists, type assertRejects } from "@std/assert";
 import { z } from "zod";
 import { createKVM } from "./kvm.ts";
 import { cascadeDeleteChildren, deleteKey } from "./delete.ts";

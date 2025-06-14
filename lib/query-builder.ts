@@ -24,7 +24,7 @@ class WhereClauseImpl<T> implements WhereClause<T> {
 
   private addCondition(
     operator: ComparisonOperator,
-    value: any,
+    value: unknown,
   ): QueryBuilder<T> {
     this.queryBuilder.addWhereCondition({
       field: this.field,
@@ -34,51 +34,51 @@ class WhereClauseImpl<T> implements WhereClause<T> {
     return this.queryBuilder;
   }
 
-  equals(value: any): QueryBuilder<T> {
+  equals(value: unknown): QueryBuilder<T> {
     return this.addCondition("equals", value);
   }
 
-  eq(value: any): QueryBuilder<T> {
+  eq(value: unknown): QueryBuilder<T> {
     return this.addCondition("eq", value);
   }
 
-  notEquals(value: any): QueryBuilder<T> {
+  notEquals(value: unknown): QueryBuilder<T> {
     return this.addCondition("notEquals", value);
   }
 
-  ne(value: any): QueryBuilder<T> {
+  ne(value: unknown): QueryBuilder<T> {
     return this.addCondition("ne", value);
   }
 
-  greaterThan(value: any): QueryBuilder<T> {
+  greaterThan(value: unknown): QueryBuilder<T> {
     return this.addCondition("greaterThan", value);
   }
 
-  gt(value: any): QueryBuilder<T> {
+  gt(value: unknown): QueryBuilder<T> {
     return this.addCondition("gt", value);
   }
 
-  greaterThanOrEqual(value: any): QueryBuilder<T> {
+  greaterThanOrEqual(value: unknown): QueryBuilder<T> {
     return this.addCondition("greaterThanOrEqual", value);
   }
 
-  gte(value: any): QueryBuilder<T> {
+  gte(value: unknown): QueryBuilder<T> {
     return this.addCondition("gte", value);
   }
 
-  lessThan(value: any): QueryBuilder<T> {
+  lessThan(value: unknown): QueryBuilder<T> {
     return this.addCondition("lessThan", value);
   }
 
-  lt(value: any): QueryBuilder<T> {
+  lt(value: unknown): QueryBuilder<T> {
     return this.addCondition("lt", value);
   }
 
-  lessThanOrEqual(value: any): QueryBuilder<T> {
+  lessThanOrEqual(value: unknown): QueryBuilder<T> {
     return this.addCondition("lessThanOrEqual", value);
   }
 
-  lte(value: any): QueryBuilder<T> {
+  lte(value: unknown): QueryBuilder<T> {
     return this.addCondition("lte", value);
   }
 
@@ -120,7 +120,7 @@ class WhereClauseImpl<T> implements WhereClause<T> {
 /**
  * Main QueryBuilder implementation
  */
-export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
+export class KVMQueryBuilder<T = unknown> implements QueryBuilder<T> {
   private config: QueryConfig = {
     where: [],
     sort: [],
@@ -246,7 +246,11 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
   async findOneOrThrow(): Promise<ModelDocument<T> & T> {
     const result = await this.findOne();
     if (!result) {
-      throw new KVMNotFoundError(this.entity.name, this.config, "query");
+      throw new KVMNotFoundError(
+        this.entity.name,
+        this.config as unknown as Record<string, unknown>,
+        "query",
+      );
     }
     return result;
   }
@@ -403,19 +407,19 @@ export class KVMQueryBuilder<T = any> implements QueryBuilder<T> {
 
       case "greaterThan":
       case "gt":
-        return fieldValue > condition.value;
+        return fieldValue > (condition.value as any);
 
       case "greaterThanOrEqual":
       case "gte":
-        return fieldValue >= condition.value;
+        return fieldValue >= (condition.value as any);
 
       case "lessThan":
       case "lt":
-        return fieldValue < condition.value;
+        return fieldValue < (condition.value as any);
 
       case "lessThanOrEqual":
       case "lte":
-        return fieldValue <= condition.value;
+        return fieldValue <= (condition.value as any);
 
       case "in":
         return Array.isArray(condition.value) &&

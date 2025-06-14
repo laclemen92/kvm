@@ -14,7 +14,7 @@ import type {
 import { JobNotFoundError, QueueError } from "./queue-types.ts";
 import { QueueWorkerImpl } from "./queue-worker.ts";
 
-export class KVMQueue<TData = any> implements Queue<TData> {
+export class KVMQueue<TData = unknown> implements Queue<TData> {
   constructor(
     public readonly name: string,
     private readonly kv: Deno.Kv,
@@ -477,7 +477,7 @@ export class KVMQueue<TData = any> implements Queue<TData> {
   }
 
   // Job completion methods for worker use
-  async completeJob(jobId: string, jobResult?: any): Promise<void> {
+  async completeJob(jobId: string, jobResult?: unknown): Promise<void> {
     const job = await this.getJob(jobId);
     if (!job) {
       throw new JobNotFoundError(this.name, jobId);

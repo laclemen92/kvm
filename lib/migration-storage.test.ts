@@ -1,9 +1,9 @@
 import {
   assertEquals,
-  assertRejects,
+  type assertRejects,
 } from "https://deno.land/std@0.220.0/assert/mod.ts";
 import { MigrationStorage } from "./migration-storage.ts";
-import { MigrationStateError } from "./migration-types.ts";
+import type { MigrationStateError } from "./migration-types.ts";
 import type { AppliedMigration } from "./migration-types.ts";
 
 Deno.test("MigrationStorage", async (t) => {

@@ -2,7 +2,7 @@
  * Tests for upsert operations
  */
 
-import { assert, assertEquals, assertRejects } from "@std/assert";
+import { type assert, assertEquals, assertRejects } from "@std/assert";
 import { z } from "zod";
 import { createModelClass } from "./model.ts";
 import type { KVMEntity } from "./types.ts";

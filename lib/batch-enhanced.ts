@@ -17,7 +17,7 @@ import { create } from "./create.ts";
 import { update } from "./update.ts";
 import { deleteKey } from "./delete.ts";
 import { findUnique } from "./find.ts";
-import { buildPrimaryKey } from "./utils.ts";
+import type { buildPrimaryKey } from "./utils.ts";
 import { KVMErrorUtils } from "./errors.ts";
 
 /**

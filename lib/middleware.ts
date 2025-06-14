@@ -32,7 +32,7 @@ const DEFAULT_HOOK_OPTIONS: Required<HookOptions> = {
 /**
  * Implementation of the hook manager
  */
-export class KVMHookManager<T = any> implements HookManager<T> {
+export class KVMHookManager<T = unknown> implements HookManager<T> {
   private hooks: RegisteredHook<T>[] = [];
   private enabled = true;
   private hookIdCounter = 0;
@@ -257,7 +257,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
   async executePostHooks(
     type: HookType,
     context: HookContext<T>,
-    result: any,
+    result: unknown,
     document?: ModelDocument<T> & T,
   ): Promise<HookExecutionResult> {
     if (!this.enabled) {
@@ -339,7 +339,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
   private async executePostHook(
     hook: RegisteredHook<T>,
     context: HookContext<T>,
-    result: any,
+    result: unknown,
     document?: ModelDocument<T> & T,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -448,7 +448,7 @@ export class KVMHookManager<T = any> implements HookManager<T> {
 /**
  * Timestamps plugin - automatically adds createdAt and updatedAt fields
  */
-export function timestampsPlugin<T = any>(options: {
+export function timestampsPlugin<T = unknown>(options: {
   createdAt?: string;
   updatedAt?: string;
 } = {}): Plugin<T> {
@@ -464,7 +464,7 @@ export function timestampsPlugin<T = any>(options: {
           context.input &&
           !context.input[createdAt as keyof typeof context.input]
         ) {
-          (context.input as any)[createdAt] = new Date();
+          (context.input as Record<string, unknown>)[createdAt] = new Date();
         }
         next();
       });
@@ -474,7 +474,7 @@ export function timestampsPlugin<T = any>(options: {
         if (context.input || this) {
           const target = context.input || this;
           if (target) {
-            (target as any)[updatedAt] = new Date();
+            (target as Record<string, unknown>)[updatedAt] = new Date();
           }
         }
         next();
@@ -483,7 +483,7 @@ export function timestampsPlugin<T = any>(options: {
       // Add updatedAt on update
       hooks.pre("update", function (context, next) {
         if (context.input) {
-          (context.input as any)[updatedAt] = new Date();
+          (context.input as Record<string, unknown>)[updatedAt] = new Date();
         }
         next();
       });
@@ -494,10 +494,10 @@ export function timestampsPlugin<T = any>(options: {
 /**
  * Validation plugin - adds custom validation rules
  */
-export function validationPlugin<T = any>(options: {
+export function validationPlugin<T = unknown>(options: {
   rules?: Record<
     string,
-    (value: any, document: any) => boolean | Promise<boolean>
+    (value: unknown, document: unknown) => boolean | Promise<boolean>
   >;
   stopOnFirstError?: boolean;
 } = {}): Plugin<T> {
@@ -517,7 +517,7 @@ export function validationPlugin<T = any>(options: {
 
         for (const [field, validator] of Object.entries(rules)) {
           try {
-            const value = (document as any)[field];
+            const value = (document as Record<string, unknown>)[field];
             const isValid = await validator(value, document);
 
             if (!isValid) {
@@ -551,7 +551,7 @@ export function validationPlugin<T = any>(options: {
 /**
  * Audit plugin - tracks who created/updated records
  */
-export function auditPlugin<T = any>(options: {
+export function auditPlugin<T = unknown>(options: {
   getCurrentUser?: () => string | Promise<string>;
   createdBy?: string;
   updatedBy?: string;
@@ -571,7 +571,7 @@ export function auditPlugin<T = any>(options: {
         if (context.input) {
           try {
             const userId = await getCurrentUser();
-            (context.input as any)[createdBy] = userId;
+            (context.input as Record<string, unknown>)[createdBy] = userId;
           } catch (error) {
             return next(error as Error);
           }
@@ -584,7 +584,7 @@ export function auditPlugin<T = any>(options: {
         if (context.input) {
           try {
             const userId = await getCurrentUser();
-            (context.input as any)[updatedBy] = userId;
+            (context.input as Record<string, unknown>)[updatedBy] = userId;
           } catch (error) {
             return next(error as Error);
           }

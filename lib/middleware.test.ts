@@ -310,7 +310,7 @@ describe("Middleware/Hooks System", () => {
       });
 
       const executionOrder: string[] = [];
-      let deletedUser: any = null;
+      let deletedUser: unknown = null;
 
       User.pre("delete", function (context, next) {
         executionOrder.push("pre-delete");
@@ -331,7 +331,7 @@ describe("Middleware/Hooks System", () => {
       await user.delete();
 
       expect(executionOrder).toEqual(["pre-delete", "post-delete"]);
-      expect(deletedUser.name).toBe("John Doe");
+      expect((deletedUser as { name: string }).name).toBe("John Doe");
     });
 
     it("should execute hooks during find operations", async () => {
@@ -432,8 +432,8 @@ describe("Middleware/Hooks System", () => {
       // Apply validation plugin with custom rules
       User.use(validationPlugin({
         rules: {
-          age: (value) => value >= 18, // Must be 18 or older
-          name: (value) => value.length >= 2, // Name must be at least 2 characters
+          age: (value) => (value as number) >= 18, // Must be 18 or older
+          name: (value) => (value as string).length >= 2, // Name must be at least 2 characters
         },
       }));
 

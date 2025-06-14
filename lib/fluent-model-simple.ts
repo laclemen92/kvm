@@ -3,12 +3,21 @@
  * Provides an intuitive, chainable interface for defining models
  */
 
-import { z, type ZodObject, type ZodRawShape, type ZodTypeAny } from "zod";
+import { z, type ZodRawShape, type ZodTypeAny } from "zod";
 import { ulid } from "@std/ulid";
 import type { Key, KVMEntity, Relation, SecondaryIndex } from "./types.ts";
 import { RelationType, ValueType } from "./types.ts";
 import { createModelClass } from "./model.ts";
 import type { ModelConstructor } from "./model-types.ts";
+
+/**
+ * Field definition return type
+ */
+export interface FieldDefinition {
+  zodType: ZodTypeAny;
+  isPrimaryKey: boolean;
+  isIndex: boolean;
+}
 
 /**
  * Simple field definition helper
@@ -26,8 +35,8 @@ export class SimpleField {
     ulid?: boolean;
     primaryKey?: boolean;
     index?: boolean;
-  }) {
-    let zodType: any = z.string();
+  }): FieldDefinition {
+    let zodType = z.string();
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -64,8 +73,8 @@ export class SimpleField {
     default?: number | (() => number);
     primaryKey?: boolean;
     index?: boolean;
-  }) {
-    let zodType: any = z.number();
+  }): FieldDefinition {
+    let zodType = z.number();
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -95,7 +104,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: any = z.boolean();
+    let zodType = z.boolean();
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -122,7 +131,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: any = z.date();
+    let zodType = z.date();
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -151,7 +160,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: any = z.enum(values);
+    let zodType = z.enum(values);
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;
@@ -178,7 +187,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: any = z.array(itemType);
+    let zodType = z.array(itemType);
 
     if (options?.min !== undefined) zodType = zodType.min(options.min);
     if (options?.max !== undefined) zodType = zodType.max(options.max);
@@ -206,7 +215,7 @@ export class SimpleField {
     primaryKey?: boolean;
     index?: boolean;
   }) {
-    let zodType: any = z.object(shape);
+    let zodType = z.object(shape);
 
     if (options?.default !== undefined) {
       const defaultValue = options.default;

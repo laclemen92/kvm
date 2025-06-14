@@ -8,7 +8,40 @@
 /**
  * TTL time unit constants in milliseconds
  */
-export const TTL = {
+type TTLType = {
+  readonly SECOND: number;
+  readonly MINUTE: number;
+  readonly HOUR: number;
+  readonly DAY: number;
+  readonly WEEK: number;
+  readonly MONTH: number;
+  readonly YEAR: number;
+  readonly PRESETS: {
+    readonly VERY_SHORT: number;
+    readonly SHORT: number;
+    readonly MEDIUM: number;
+    readonly LONG: number;
+    readonly VERY_LONG: number;
+  };
+  until(date: Date): number;
+  fromNow(
+    amount: number,
+    unit:
+      | "seconds"
+      | "minutes"
+      | "hours"
+      | "days"
+      | "weeks"
+      | "months"
+      | "years",
+  ): number;
+  toExpirationDate(ttlMs: number): Date;
+  isValid(ttlMs: number): boolean;
+  parse(ttlString: string): number;
+  format(ttlMs: number): string;
+};
+
+export const TTL: TTLType = {
   /**
    * Time units for easy TTL calculations
    */
@@ -142,7 +175,33 @@ export const TTL = {
 /**
  * TTL configuration for common use cases
  */
-export const TTLConfig = {
+type TTLConfigType = {
+  readonly SESSION: {
+    readonly SHORT: number;
+    readonly STANDARD: number;
+    readonly EXTENDED: number;
+  };
+  readonly TOKEN: {
+    readonly EMAIL_VERIFICATION: number;
+    readonly PASSWORD_RESET: number;
+    readonly OTP: number;
+    readonly RATE_LIMIT: number;
+  };
+  readonly CACHE: {
+    readonly QUICK: number;
+    readonly STANDARD: number;
+    readonly LONG_TERM: number;
+    readonly STATIC: number;
+  };
+  readonly TEMPORARY: {
+    readonly EPHEMERAL: number;
+    readonly FORM_DATA: number;
+    readonly UPLOAD_TOKEN: number;
+    readonly DRAFT: number;
+  };
+};
+
+export const TTLConfig: TTLConfigType = {
   /**
    * User session management
    */
@@ -203,7 +262,7 @@ export const TTLConfig = {
  */
 export function withTTL(
   ttl: number | string,
-  baseOptions: Record<string, any> = {},
+  baseOptions: Record<string, unknown> = {},
 ): { expireIn: number } & typeof baseOptions {
   const expireIn = typeof ttl === "string" ? TTL.parse(ttl) : ttl;
 
@@ -222,8 +281,8 @@ export function withTTL(
  */
 export function sessionTTL(
   type: keyof typeof TTLConfig.SESSION = "STANDARD",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): { expireIn: number } & typeof baseOptions {
   return withTTL(TTLConfig.SESSION[type], baseOptions);
 }
 
@@ -232,8 +291,8 @@ export function sessionTTL(
  */
 export function cacheTTL(
   type: keyof typeof TTLConfig.CACHE = "STANDARD",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): { expireIn: number } & typeof baseOptions {
   return withTTL(TTLConfig.CACHE[type], baseOptions);
 }
 
@@ -242,8 +301,8 @@ export function cacheTTL(
  */
 export function tokenTTL(
   type: keyof typeof TTLConfig.TOKEN,
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): { expireIn: number } & typeof baseOptions {
   return withTTL(TTLConfig.TOKEN[type], baseOptions);
 }
 
@@ -252,7 +311,7 @@ export function tokenTTL(
  */
 export function temporaryTTL(
   type: keyof typeof TTLConfig.TEMPORARY = "FORM_DATA",
-  baseOptions: Record<string, any> = {},
-) {
+  baseOptions: Record<string, unknown> = {},
+): { expireIn: number } & typeof baseOptions {
   return withTTL(TTLConfig.TEMPORARY[type], baseOptions);
 }

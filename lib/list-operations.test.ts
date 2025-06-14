@@ -8,7 +8,7 @@ import {
   listByDateRange,
   listByPrefix,
   listRange,
-  listStream,
+  type listStream,
   paginate,
 } from "./list-operations.ts";
 

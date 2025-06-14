@@ -70,7 +70,7 @@ export interface BatchCreateOptions extends CreateOptions {
    * Function called before each retry attempt.
    * Useful for logging or implementing exponential backoff.
    */
-  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
+  onRetry?: (error: Error, attempt: number, data: unknown) => void | Promise<void>;
 }
 
 /**
@@ -127,7 +127,7 @@ export interface BatchUpdateOptions extends UpdateOptions {
   /**
    * Function called before each retry attempt.
    */
-  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
+  onRetry?: (error: Error, attempt: number, data: unknown) => void | Promise<void>;
 }
 
 /**
@@ -190,7 +190,7 @@ export interface BatchDeleteOptions extends DeleteOptions {
   /**
    * Function called before each retry attempt.
    */
-  onRetry?: (error: Error, attempt: number, data: any) => void | Promise<void>;
+  onRetry?: (error: Error, attempt: number, data: unknown) => void | Promise<void>;
 }
 
 /**
@@ -214,7 +214,7 @@ export interface ValidationResult<T> {
     field: string;
     message: string;
     rule: string;
-    value?: any;
+    value?: unknown;
   }>;
 
   /**
@@ -260,7 +260,7 @@ export interface BatchCreateResult<T> {
    * Failed items with errors
    */
   failed: Array<{
-    data: any;
+    data: unknown;
     error: Error;
     index: number;
     retryCount?: number;
@@ -292,7 +292,7 @@ export interface BatchUpdateResult<T> {
    * Items that were not found
    */
   notFound: Array<{
-    key: any;
+    key: unknown;
     index: number;
   }>;
 
@@ -300,8 +300,8 @@ export interface BatchUpdateResult<T> {
    * Failed items with errors
    */
   failed: Array<{
-    key: any;
-    data: any;
+    key: unknown;
+    data: unknown;
     error: Error;
     index: number;
     retryCount?: number;
@@ -339,7 +339,7 @@ export interface BatchDeleteResult<T> {
    * Items that were not found
    */
   notFound: Array<{
-    key: any;
+    key: unknown;
     index: number;
   }>;
 
@@ -347,7 +347,7 @@ export interface BatchDeleteResult<T> {
    * Failed items with errors
    */
   failed: Array<{
-    key: any;
+    key: unknown;
     error: Error;
     index: number;
     retryCount?: number;

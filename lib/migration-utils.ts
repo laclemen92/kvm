@@ -16,7 +16,7 @@ export class KVMMigrationUtils implements MigrationUtils {
   async addField(
     entityName: string,
     fieldName: string,
-    defaultValue: any,
+    defaultValue: unknown,
   ): Promise<void> {
     await this.batchProcess(
       entityName,
@@ -58,7 +58,7 @@ export class KVMMigrationUtils implements MigrationUtils {
             record.value && typeof record.value === "object" &&
             fieldName in record.value
           ) {
-            const { [fieldName]: removed, ...rest } = record.value;
+            const { [fieldName]: removed, ...rest } = record.value as Record<string, unknown>;
             atomic.set(record.key, rest);
           }
         }
@@ -91,7 +91,7 @@ export class KVMMigrationUtils implements MigrationUtils {
             record.value && typeof record.value === "object" &&
             oldName in record.value
           ) {
-            const { [oldName]: value, ...rest } = record.value;
+            const { [oldName]: value, ...rest } = record.value as Record<string, unknown>;
             atomic.set(record.key, {
               ...rest,
               [newName]: value,
@@ -115,7 +115,7 @@ export class KVMMigrationUtils implements MigrationUtils {
   async transformField(
     entityName: string,
     fieldName: string,
-    transformer: (value: any, record: any) => any,
+    transformer: (value: unknown, record: unknown) => unknown,
   ): Promise<void> {
     await this.batchProcess(
       entityName,
@@ -128,7 +128,7 @@ export class KVMMigrationUtils implements MigrationUtils {
             fieldName in record.value
           ) {
             const transformedValue = transformer(
-              record.value[fieldName],
+              (record.value as Record<string, unknown>)[fieldName],
               record.value,
             );
             atomic.set(record.key, {
@@ -152,7 +152,7 @@ export class KVMMigrationUtils implements MigrationUtils {
    * Copy data from one entity to another
    */
   async copyEntity(sourceEntity: string, targetEntity: string): Promise<void> {
-    const sourceRecords: Array<{ key: Deno.KvKey; value: any }> = [];
+    const sourceRecords: Array<{ key: Deno.KvKey; value: unknown }> = [];
 
     // Collect all source records
     for await (const entry of this.kv.list({ prefix: [sourceEntity] })) {
@@ -242,11 +242,11 @@ export class KVMMigrationUtils implements MigrationUtils {
   async batchProcess(
     entityName: string,
     processor: (
-      records: Array<{ key: Deno.KvKey; value: any }>,
+      records: Array<{ key: Deno.KvKey; value: unknown }>,
     ) => Promise<void>,
     batchSize: number = 100,
   ): Promise<void> {
-    let batch: Array<{ key: Deno.KvKey; value: any }> = [];
+    let batch: Array<{ key: Deno.KvKey; value: unknown }> = [];
 
     for await (const entry of this.kv.list({ prefix: [entityName] })) {
       batch.push({ key: entry.key, value: entry.value });
@@ -361,8 +361,8 @@ export class KVMMigrationUtils implements MigrationUtils {
             record.value && typeof record.value === "object" &&
             fieldName in record.value
           ) {
-            const fieldValue = record.value[fieldName];
-            const indexKey = [finalIndexName, fieldValue];
+            const fieldValue = (record.value as Record<string, unknown>)[fieldName];
+            const indexKey = [finalIndexName, fieldValue] as Deno.KvKey;
 
             // Store reference to the main record
             atomic.set(indexKey, record.key);

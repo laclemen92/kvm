@@ -4,7 +4,10 @@
 export abstract class KVMError extends Error {
   abstract readonly code: string;
 
-  constructor(message: string, public readonly context?: Record<string, any>) {
+  constructor(
+    message: string,
+    public readonly context?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = this.constructor.name;
 
@@ -17,7 +20,7 @@ export abstract class KVMError extends Error {
   /**
    * Convert error to a plain object for serialization
    */
-  toJSON() {
+  toJSON(): Record<string, unknown> {
     return {
       name: this.name,
       code: this.code,
@@ -36,7 +39,7 @@ export class KVMValidationError extends KVMError {
 
   constructor(
     public readonly field: string,
-    public readonly value: any,
+    public readonly value: unknown,
     public readonly rule: string,
     public readonly modelName?: string,
   ) {
@@ -61,7 +64,7 @@ export class KVMNotFoundError extends KVMError {
 
   constructor(
     public readonly modelName: string,
-    public readonly identifier: string | Record<string, any>,
+    public readonly identifier: string | Record<string, unknown>,
     public readonly searchType: "id" | "unique" | "first" | "query" = "id",
   ) {
     const identifierStr = typeof identifier === "string"
@@ -94,7 +97,7 @@ export class KVMConstraintError extends KVMError {
       | "check"
       | "not_null",
     public readonly field: string,
-    public readonly value: any,
+    public readonly value: unknown,
     public readonly modelName?: string,
   ) {
     const modelPrefix = modelName ? `${modelName}: ` : "";
@@ -190,7 +193,7 @@ export class KVMConcurrencyError extends KVMError {
   constructor(
     public readonly operation: string,
     public readonly modelName?: string,
-    public readonly identifier?: string | Record<string, any>,
+    public readonly identifier?: string | Record<string, unknown>,
   ) {
     const modelPrefix = modelName ? `${modelName}: ` : "";
     const identifierStr = identifier
@@ -218,7 +221,7 @@ export class KVMQueryError extends KVMError {
 
   constructor(
     message: string,
-    public readonly queryContext?: Record<string, any>,
+    public readonly queryContext?: Record<string, unknown>,
   ) {
     super(`Query error: ${message}`, { queryContext });
   }
@@ -227,13 +230,22 @@ export class KVMQueryError extends KVMError {
 /**
  * Thrown when batch operations encounter validation errors
  */
+export interface ValidationErrorDetail {
+  field: string;
+  message: string;
+  rule: string;
+  value?: unknown;
+}
+
 export class KVMBatchValidationError extends KVMError {
   readonly code = "KVM_BATCH_VALIDATION_ERROR";
 
   constructor(
     public readonly results: {
-      valid: any[];
-      invalid: Array<{ data: any; errors: any[]; index: number }>;
+      valid: unknown[];
+      invalid: Array<
+        { data: unknown; errors: ValidationErrorDetail[]; index: number }
+      >;
       stats: { total: number; valid: number; invalid: number };
     },
     public readonly modelName?: string,
@@ -262,7 +274,7 @@ export class KVMBatchOperationError extends KVMError {
     public readonly succeeded: number,
     public readonly failed: number,
     public readonly errors: Array<
-      { data?: any; key?: any; error: Error; index: number }
+      { data?: unknown; key?: unknown; error: Error; index: number }
     >,
     public readonly modelName?: string,
   ) {
@@ -287,50 +299,54 @@ export class KVMErrorUtils {
   /**
    * Check if an error is a KVM error
    */
-  static isKVMError(error: any): error is KVMError {
+  static isKVMError(error: unknown): error is KVMError {
     return error instanceof KVMError;
   }
 
   /**
    * Check if an error is a specific type of KVM error
    */
-  static isValidationError(error: any): error is KVMValidationError {
+  static isValidationError(error: unknown): error is KVMValidationError {
     return error instanceof KVMValidationError;
   }
 
-  static isNotFoundError(error: any): error is KVMNotFoundError {
+  static isNotFoundError(error: unknown): error is KVMNotFoundError {
     return error instanceof KVMNotFoundError;
   }
 
-  static isConstraintError(error: any): error is KVMConstraintError {
+  static isConstraintError(error: unknown): error is KVMConstraintError {
     return error instanceof KVMConstraintError;
   }
 
-  static isOperationError(error: any): error is KVMOperationError {
+  static isOperationError(error: unknown): error is KVMOperationError {
     return error instanceof KVMOperationError;
   }
 
-  static isConfigurationError(error: any): error is KVMConfigurationError {
+  static isConfigurationError(error: unknown): error is KVMConfigurationError {
     return error instanceof KVMConfigurationError;
   }
 
-  static isConnectionError(error: any): error is KVMConnectionError {
+  static isConnectionError(error: unknown): error is KVMConnectionError {
     return error instanceof KVMConnectionError;
   }
 
-  static isConcurrencyError(error: any): error is KVMConcurrencyError {
+  static isConcurrencyError(error: unknown): error is KVMConcurrencyError {
     return error instanceof KVMConcurrencyError;
   }
 
-  static isQueryError(error: any): error is KVMQueryError {
+  static isQueryError(error: unknown): error is KVMQueryError {
     return error instanceof KVMQueryError;
   }
 
-  static isBatchValidationError(error: any): error is KVMBatchValidationError {
+  static isBatchValidationError(
+    error: unknown,
+  ): error is KVMBatchValidationError {
     return error instanceof KVMBatchValidationError;
   }
 
-  static isBatchOperationError(error: any): error is KVMBatchOperationError {
+  static isBatchOperationError(
+    error: unknown,
+  ): error is KVMBatchOperationError {
     return error instanceof KVMBatchOperationError;
   }
 
@@ -353,11 +369,20 @@ export class KVMErrorUtils {
    * Create a validation error from a Zod error
    */
   static fromZodError(
-    zodError: any,
+    zodError: unknown,
     modelName?: string,
   ): KVMValidationError {
-    if (zodError.errors && zodError.errors.length > 0) {
-      const firstError = zodError.errors[0];
+    const error = zodError as {
+      errors?: Array<{
+        path?: string[];
+        message?: string;
+        received?: unknown;
+      }>;
+      message?: string;
+    };
+
+    if (error.errors && error.errors.length > 0) {
+      const firstError = error.errors[0];
       const field = firstError.path?.join(".") || "unknown";
       const rule = firstError.message || "validation failed";
       const value = firstError.received;
@@ -368,7 +393,7 @@ export class KVMErrorUtils {
     return new KVMValidationError(
       "unknown",
       undefined,
-      zodError.message || "Schema validation failed",
+      error.message || "Schema validation failed",
       modelName,
     );
   }
@@ -376,13 +401,13 @@ export class KVMErrorUtils {
   /**
    * Extract user-friendly error message
    */
-  static getUserMessage(error: any): string {
+  static getUserMessage(error: unknown): string {
     if (KVMErrorUtils.isKVMError(error)) {
       return error.message;
     }
 
     // Handle common non-KVM errors
-    if ((error as any).name === "ZodError") {
+    if ((error as Error).name === "ZodError") {
       return "Invalid data provided";
     }
 
@@ -392,7 +417,7 @@ export class KVMErrorUtils {
   /**
    * Check if error should be retried
    */
-  static isRetryable(error: any): boolean {
+  static isRetryable(error: unknown): boolean {
     if (KVMErrorUtils.isConnectionError(error)) {
       return true;
     }
